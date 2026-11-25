@@ -48,6 +48,7 @@ export const PlaneDetailCard: React.FC<PlaneDetailCardProps> = ({
 
   return (
     <aside className="plane-detail-card" aria-label={`Details for ${plane.callsign}`}>
+      <div className="sheet-handle" aria-hidden="true" />
       <button
         type="button"
         className="detail-close-btn"

@@ -293,7 +293,6 @@ export function App() {
   }, [selectedPlane, detailsCache]);
 
   const handleSelectPlane = useCallback((plane: AircraftTelemetry) => {
-    playTapPing();
     stopSpeaking();
     setSpeakingId(null);
     setSelectedPlaneId(plane.id);
