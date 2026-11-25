@@ -1670,17 +1670,17 @@ select {
   .map-stage {
     flex-direction: column;
     height: auto;
-    min-height: 400px;
+    min-height: 440px;
   }
 
   .map-container-wrap {
-    height: 420px;
-    min-height: 420px;
+    height: calc(100dvh - 230px);
+    min-height: 440px;
   }
 
   .sky-map-canvas {
-    height: 420px;
-    min-height: 420px;
+    height: calc(100dvh - 230px);
+    min-height: 440px;
   }
 
   .sheet-handle {
@@ -1703,5 +1703,104 @@ select {
     z-index: 2000;
     box-shadow: 0 -10px 36px rgba(15, 23, 42, 0.28);
     animation: slideUpSheet 0.2s ease-out;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 8px 10px 12px;
+    gap: 8px;
+  }
+
+  .top-nav {
+    padding: 8px 10px;
+    gap: 8px;
+    border-radius: 16px;
+    flex-wrap: nowrap;
+  }
+
+  .brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 0 #0369a1;
+  }
+
+  .brand-title {
+    font-size: 1.05rem;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .main-tabs {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .nav-tab-btn {
+    padding: 7px 10px;
+    font-size: 0.84rem;
+    gap: 5px;
+    border-radius: 11px;
+  }
+
+  .btn-voice-settings {
+    padding: 7px 9px;
+    border-radius: 11px;
+    flex-shrink: 0;
+  }
+
+  .btn-voice-settings span {
+    display: none;
+  }
+
+  .map-controls-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .map-controls-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .controls-left,
+  .controls-right {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .mode-btn {
+    padding: 6px 9px;
+    font-size: 0.8rem;
+  }
+
+  .location-picker {
+    padding: 3px 6px 3px 8px;
+    gap: 5px;
+  }
+
+  .location-picker select {
+    font-size: 0.8rem;
+    max-width: 125px;
+  }
+
+  .btn-gps,
+  .btn-pill-toggle,
+  .btn-jump-home {
+    padding: 6px 9px;
+    font-size: 0.8rem;
+  }
+
+  .map-container-wrap,
+  .sky-map-canvas {
+    height: calc(100dvh - 195px);
+    min-height: 420px;
   }
 }
