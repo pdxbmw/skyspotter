@@ -90,7 +90,21 @@ export const SkyMap: React.FC<SkyMapProps> = ({
     mapRef.current = map;
     lastHomeKeyRef.current = `${home.lat.toFixed(4)},${home.lon.toFixed(4)}`;
 
+    const resizeTimer = window.setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
+    const observer =
+      typeof ResizeObserver !== 'undefined' && containerRef.current
+        ? new ResizeObserver(() => map.invalidateSize())
+        : null;
+    if (observer && containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
     return () => {
+      window.clearTimeout(resizeTimer);
+      observer?.disconnect();
       map.remove();
       mapRef.current = null;
     };
