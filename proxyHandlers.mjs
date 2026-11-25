@@ -148,9 +148,50 @@ async function handleWorldFlightsApi(reqUrl, res) {
     });
     return;
   } catch (err) {
-    // Graceful fallback to adsb.lol center point if OpenSky is temporarily throttled
-    const centerLat = ((lamin + lamax) / 2).toFixed(4);
-    const centerLon = ((lomin + lomax) / 2).toFixed(4);
+    // Graceful fallback: sample global/in-view hubs from adsb.fi v3 (with adsb.lol backup)
+    const hubs = [
+      [45.5, -122.5],
+      [40.6, -73.8],
+      [51.5, -0.4],
+      [35.5, 139.8],
+    ];
+    const inView = hubs.filter(
+      ([hLat, hLon]) => hLat >= lamin - 10 && hLat <= lamax + 10 && hLon >= lomin - 15 && hLon <= lomax + 15
+    );
+    const centerLat = Number(((lamin + lamax) / 2).toFixed(2));
+    const centerLon = Number(((lomin + lomax) / 2).toFixed(2));
+    const targets = inView.length > 0 ? inView : [[centerLat, centerLon]];
+
+    const seenHex = new Set();
+    const combined = [];
+    for (const [tLat, tLon] of targets) {
+      try {
+        const json = await fetchJsonWithTimeout(
+          `https://opendata.adsb.fi/api/v3/lat/${tLat}/lon/${tLon}/dist/460`,
+          6000
+        );
+        const list = Array.isArray(json.ac) ? json.ac : [];
+        for (const p of list.filter((x) => x.alt_baro !== 'ground').slice(0, 40)) {
+          const id = p.hex || p.flight;
+          if (!id || seenHex.has(id)) continue;
+          seenHex.add(id);
+          combined.push(p);
+        }
+      } catch {
+        // try next hub
+      }
+    }
+
+    if (combined.length > 0) {
+      sendJson(res, 200, {
+        source: 'adsb.fi-world',
+        now: Date.now(),
+        total: combined.length,
+        ac: combined,
+      });
+      return;
+    }
+
     try {
       const json = await fetchJsonWithTimeout(
         `https://api.adsb.lol/v2/point/${centerLat}/${centerLon}/250`,
@@ -196,14 +237,15 @@ export async function handleFlightsApi(reqUrl, res) {
     return;
   }
 
+  const km = Math.min(460, Math.max(10, Math.round(radius * 1.852)));
   const providers = [
+    {
+      name: 'adsb.fi',
+      url: `https://opendata.adsb.fi/api/v3/lat/${lat}/lon/${lon}/dist/${km}`,
+    },
     {
       name: 'adsb.lol',
       url: `https://api.adsb.lol/v2/point/${lat}/${lon}/${radius}`,
-    },
-    {
-      name: 'airplanes.live',
-      url: `https://api.airplanes.live/v2/point/${lat}/${lon}/${radius}`,
     },
   ];
 
@@ -211,11 +253,16 @@ export async function handleFlightsApi(reqUrl, res) {
   for (const provider of providers) {
     try {
       const json = await fetchJsonWithTimeout(provider.url, 7000);
+      const list = Array.isArray(json.ac)
+        ? json.ac
+        : Array.isArray(json.aircraft)
+          ? json.aircraft
+          : [];
       const payload = {
         source: provider.name,
-        now: json.now ?? Date.now(),
-        total: Array.isArray(json.ac) ? json.ac.length : 0,
-        ac: Array.isArray(json.ac) ? json.ac : [],
+        now: json.now ? (json.now < 1e12 ? json.now * 1000 : json.now) : Date.now(),
+        total: list.length,
+        ac: list,
       };
       flightsCache.set(cacheKey, { ts: Date.now(), data: payload });
       sendJson(res, 200, payload);

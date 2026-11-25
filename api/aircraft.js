@@ -1,0 +1,6 @@
+import { handleAircraftApi } from '../proxyHandlers.mjs';
+
+export default async function handler(req, res) {
+  const reqUrl = new URL(req.url ?? '/', 'http://localhost');
+  await handleAircraftApi(reqUrl, res);
+}

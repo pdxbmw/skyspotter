@@ -1,9 +1,8 @@
 /**
- * Free Cloudflare Worker proxy for GitHub Pages deployment with edge caching
- * so multiple friends share cached upstream responses without hitting rate limits.
+ * Free Cloudflare Worker proxy for GitHub Pages deployment with coarse grid caching
+ * so multiple friends share cached upstream responses without tripping rate limits.
  *
- * Deploy via `cd worker && npx wrangler deploy` (or paste into the Cloudflare dashboard),
- * then set GitHub repo variable VITE_API_BASE=https://<your-worker>.workers.dev
+ * Deploy via `npx wrangler deploy --config worker/wrangler.toml`
  */
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +19,35 @@ function jsonResponse(data, status = 200, maxAgeSeconds = 0) {
     headers['Cache-Control'] = `public, max-age=${maxAgeSeconds}`;
   }
   return new Response(JSON.stringify(data), { status, headers });
+}
+
+function haversineNm(lat1, lon1, lat2, lon2) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 3440.065 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function openSkyStateToAc(s) {
+  const altMeters = s[7] ?? s[13];
+  return {
+    hex: String(s[0] || '').trim(),
+    flight: String(s[1] || s[0] || '').trim(),
+    lat: s[6],
+    lon: s[5],
+    alt_baro: s[8]
+      ? 'ground'
+      : typeof altMeters === 'number'
+        ? Math.max(0, Math.round(altMeters * 3.28084))
+        : undefined,
+    gs: typeof s[9] === 'number' ? Number((s[9] * 1.94384).toFixed(1)) : undefined,
+    track: typeof s[10] === 'number' ? s[10] : 0,
+    baro_rate: typeof s[11] === 'number' ? Math.round(s[11] * 196.85) : 0,
+    squawk: typeof s[14] === 'string' ? s[14] : undefined,
+  };
 }
 
 function sampleWorldPlanes(states, bounds, maxMarkers = 160) {
@@ -50,25 +78,14 @@ function sampleWorldPlanes(states, bounds, maxMarkers = 160) {
     for (const bucket of cells.values()) {
       const s = bucket[round];
       if (!s) continue;
-      const altMeters = s[7] ?? s[13];
-      ac.push({
-        hex: String(s[0] || '').trim(),
-        flight: String(s[1] || s[0] || '').trim(),
-        lat: s[6],
-        lon: s[5],
-        alt_baro: typeof altMeters === 'number' ? Math.max(0, Math.round(altMeters * 3.28084)) : undefined,
-        gs: typeof s[9] === 'number' ? Number((s[9] * 1.94384).toFixed(1)) : undefined,
-        track: typeof s[10] === 'number' ? s[10] : 0,
-        baro_rate: typeof s[11] === 'number' ? Math.round(s[11] * 196.85) : 0,
-        squawk: typeof s[14] === 'string' ? s[14] : undefined,
-      });
+      ac.push(openSkyStateToAc(s));
       if (ac.length >= maxMarkers) break;
     }
   }
   return ac;
 }
 
-async function fetchCachedJson(cacheKeyUrl, upstreamUrl, ttlSeconds, ctx) {
+async function fetchCachedJson(cacheKeyUrl, upstreamUrl, ttlSeconds, ctx, timeoutMs = 6000) {
   const cache = caches.default;
   const cacheReq = new Request(cacheKeyUrl, { method: 'GET' });
   const cached = await cache.match(cacheReq);
@@ -77,10 +94,11 @@ async function fetchCachedJson(cacheKeyUrl, upstreamUrl, ttlSeconds, ctx) {
   }
 
   const res = await fetch(upstreamUrl, {
-    headers: { 'User-Agent': 'SkySpotter-Worker/1.0', Accept: 'application/json' },
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status} from ${upstreamUrl}`);
   }
   const data = await res.json();
   const toCache = new Response(JSON.stringify(data), {
@@ -92,6 +110,85 @@ async function fetchCachedJson(cacheKeyUrl, upstreamUrl, ttlSeconds, ctx) {
   ctx.waitUntil(cache.put(cacheReq, toCache));
   return data;
 }
+
+async function fetchPointRadar(lat, lon, radiusNm, ctx) {
+  // Snap to a 0.5-degree grid (~30nm) at 250nm radius so all zoom levels & nearby users share cache
+  const gridLat = (Math.round(Number(lat) * 2) / 2).toFixed(1);
+  const gridLon = (Math.round(Number(lon) * 2) / 2).toFixed(1);
+  const targetRadius = Math.min(250, Math.max(5, Math.round(Number(radiusNm) || 40)));
+
+  const providers = [
+    {
+      name: 'adsb.lol',
+      cacheKey: `https://skyspotter-cache.internal/adsblol-grid/${gridLat}/${gridLon}`,
+      url: `https://api.adsb.lol/v2/point/${gridLat}/${gridLon}/250`,
+    },
+    {
+      name: 'adsb.fi',
+      cacheKey: `https://skyspotter-cache.internal/adsbfi-grid/${gridLat}/${gridLon}`,
+      url: `https://opendata.adsb.fi/api/v2/lat/${gridLat}/lon/${gridLon}/dist/250`,
+    },
+  ];
+
+  const errors = [];
+  for (const provider of providers) {
+    try {
+      const data = await fetchCachedJson(provider.cacheKey, provider.url, 30, ctx, 5500);
+      const rawList = Array.isArray(data.ac)
+        ? data.ac
+        : Array.isArray(data.aircraft)
+          ? data.aircraft
+          : [];
+      const filtered = rawList.filter((p) => {
+        if (typeof p.lat !== 'number' || typeof p.lon !== 'number') return false;
+        return haversineNm(lat, lon, p.lat, p.lon) <= targetRadius + 15;
+      });
+      return {
+        source: provider.name,
+        now: data.now ? (data.now < 1e12 ? data.now * 1000 : data.now) : Date.now(),
+        ac: filtered,
+      };
+    } catch (err) {
+      errors.push(`${provider.name}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // Final local fallback: OpenSky bounding box (~1.5 deg around lat/lon)
+  try {
+    const pad = Math.max(0.8, targetRadius / 60);
+    const lamin = Math.max(-85, lat - pad).toFixed(1);
+    const lamax = Math.min(85, lat + pad).toFixed(1);
+    const lomin = Math.max(-180, lon - pad * 1.4).toFixed(1);
+    const lomax = Math.min(180, lon + pad * 1.4).toFixed(1);
+    const data = await fetchCachedJson(
+      `https://skyspotter-cache.internal/opensky-box/${gridLat}/${gridLon}`,
+      `https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`,
+      30,
+      ctx,
+      6000
+    );
+    const states = Array.isArray(data.states) ? data.states : [];
+    const ac = states
+      .map(openSkyStateToAc)
+      .filter((p) => typeof p.lat === 'number' && typeof p.lon === 'number');
+    return {
+      source: 'opensky',
+      now: (data.time || Math.floor(Date.now() / 1000)) * 1000,
+      ac,
+    };
+  } catch (err) {
+    errors.push(`opensky: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  throw new Error(errors.join(' | '));
+}
+
+const WORLD_SAMPLE_HUBS = [
+  [45.5, -122.5], // US West
+  [40.5, -74.0],  // US East
+  [51.5, -0.5],   // Europe
+  [35.5, 139.5],  // East Asia
+];
 
 export default {
   async fetch(request, _env, ctx) {
@@ -109,12 +206,15 @@ export default {
         const lomax = Math.min(180, Number.parseFloat(url.searchParams.get('lomax') || '180') || 180);
 
         try {
-          const json = await fetchCachedJson(
-            'https://skyspotter-cache.internal/opensky-world-v1',
-            'https://opensky-network.org/api/states/all',
-            25,
-            ctx
-          );
+          const isRegional = lamax - lamin < 70 && lomax - lomin < 100;
+          const osUrl = isRegional
+            ? `https://opensky-network.org/api/states/all?lamin=${lamin.toFixed(1)}&lomin=${lomin.toFixed(1)}&lamax=${lamax.toFixed(1)}&lomax=${lomax.toFixed(1)}`
+            : 'https://opensky-network.org/api/states/all';
+          const osCacheKey = isRegional
+            ? `https://skyspotter-cache.internal/opensky/${lamin.toFixed(0)}/${lomin.toFixed(0)}/${lamax.toFixed(0)}/${lomax.toFixed(0)}`
+            : 'https://skyspotter-cache.internal/opensky-world-v1';
+
+          const json = await fetchCachedJson(osCacheKey, osUrl, 30, ctx, 5500);
           const states = Array.isArray(json.states) ? json.states : [];
           const ac = sampleWorldPlanes(states, { lamin, lomin, lamax, lomax }, 160);
           return jsonResponse(
@@ -122,35 +222,51 @@ export default {
               source: 'opensky-world',
               now: (json.time || Math.floor(Date.now() / 1000)) * 1000,
               total: ac.length,
-              globalTotal: states.length,
+              globalTotal: isRegional ? undefined : states.length,
               ac,
             },
             200,
-            15
+            25
           );
         } catch {
-          // Graceful fallback to adsb.lol at viewport center if OpenSky throttles
-          const centerLat = ((lamin + lamax) / 2).toFixed(2);
-          const centerLon = ((lomin + lomax) / 2).toFixed(2);
-          try {
-            const data = await fetchCachedJson(
-              `https://skyspotter-cache.internal/adsb/${centerLat}/${centerLon}/250`,
-              `https://api.adsb.lol/v2/point/${centerLat}/${centerLon}/250`,
-              15,
-              ctx
-            );
-            const ac = Array.isArray(data.ac) ? data.ac : [];
+          const inViewHubs = WORLD_SAMPLE_HUBS.filter(
+            ([hLat, hLon]) => hLat >= lamin - 10 && hLat <= lamax + 10 && hLon >= lomin - 15 && hLon <= lomax + 15
+          );
+          const centerLat = (lamin + lamax) / 2;
+          const centerLon = (lomin + lomax) / 2;
+          const targets = inViewHubs.length > 0 ? inViewHubs : [[centerLat, centerLon]];
+
+          const seenHex = new Set();
+          const combined = [];
+          for (const [tLat, tLon] of targets) {
+            try {
+              const res = await fetchPointRadar(tLat, tLon, 250, ctx);
+              const airborne = res.ac.filter((p) => p.alt_baro !== 'ground').slice(0, 40);
+              for (const p of airborne) {
+                const id = p.hex || p.flight;
+                if (!id || seenHex.has(id)) continue;
+                seenHex.add(id);
+                combined.push(p);
+              }
+            } catch {
+              // continue to remaining hubs
+            }
+          }
+
+          if (combined.length > 0) {
             return jsonResponse(
-              { source: 'adsb.lol', now: data.now ?? Date.now(), total: ac.length, ac },
+              {
+                source: 'adsb-world',
+                now: Date.now(),
+                total: combined.length,
+                ac: combined,
+              },
               200,
-              15
-            );
-          } catch (fallbackErr) {
-            return jsonResponse(
-              { error: 'Live flight feeds unavailable', detail: String(fallbackErr) },
-              502
+              25
             );
           }
+
+          return jsonResponse({ error: 'World flight feeds unavailable right now' }, 502);
         }
       }
 
@@ -161,22 +277,12 @@ export default {
         return jsonResponse({ error: 'lat and lon required' }, 400);
       }
 
-      const radius = Math.min(250, Math.max(5, Math.round(rawRadius || 40)));
-      const qLat = lat.toFixed(1);
-      const qLon = lon.toFixed(1);
-
       try {
-        const data = await fetchCachedJson(
-          `https://skyspotter-cache.internal/adsb/${qLat}/${qLon}/${radius}`,
-          `https://api.adsb.lol/v2/point/${qLat}/${qLon}/${radius}`,
-          15,
-          ctx
-        );
-        const ac = Array.isArray(data.ac) ? data.ac : [];
+        const result = await fetchPointRadar(lat, lon, rawRadius, ctx);
         return jsonResponse(
-          { source: 'adsb.lol', now: data.now ?? Date.now(), total: ac.length, ac },
+          { source: result.source, now: result.now, total: result.ac.length, ac: result.ac },
           200,
-          15
+          20
         );
       } catch (err) {
         return jsonResponse({ error: 'Local flight feed unavailable', detail: String(err) }, 502);
