@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   MapPin,
-  Radio,
   Radar,
   RefreshCw,
   BookOpen,
   Compass,
-  Sparkles,
   Home,
   SlidersHorizontal,
+  MoreHorizontal,
+  Check,
 } from 'lucide-react';
 import { PlaneDetailCard } from './components/PlaneDetailCard';
 import { PlaneGuide } from './components/PlaneGuide';
@@ -18,13 +18,11 @@ import {
   CATEGORY_STYLES,
   LOCATION_PRESETS,
 } from './data/aviationKnowledge';
-import { generateDemoFlights } from './data/demoFlights';
 import {
   AircraftDetailsResponse,
   AircraftTelemetry,
   EncyclopediaEntry,
   HomeLocation,
-  SkyMode,
 } from './types/aviation';
 import {
   haversineMiles,
@@ -32,7 +30,6 @@ import {
 } from './utils/flightHelpers';
 import {
   loadVoiceSettings,
-  playTapPing,
   saveVoiceSettings,
   speakStory,
   stopSpeaking,
@@ -72,7 +69,6 @@ export function App() {
   const initial = useMemo(() => loadInitialState(), []);
 
   const [tab, setTab] = useState<ActiveTab>('map');
-  const [skyMode, setSkyMode] = useState<SkyMode>('live');
   const [home, setHome] = useState<HomeLocation>(initial.home);
   const [scanViewport, setScanViewport] = useState<{
     lat: number;
@@ -89,9 +85,9 @@ export function App() {
   });
   const [jumpHomeSeq, setJumpHomeSeq] = useState(0);
   const [showRadarRings, setShowRadarRings] = useState(true);
+  const [showMapMenu, setShowMapMenu] = useState(false);
 
   const [livePlanes, setLivePlanes] = useState<AircraftTelemetry[]>([]);
-  const [demoElapsed, setDemoElapsed] = useState(0);
   const [loadingFlights, setLoadingFlights] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'idle' | 'ok' | 'error'>('idle');
   const [liveErrorMsg, setLiveErrorMsg] = useState<string | null>(null);
@@ -111,11 +107,24 @@ export function App() {
 
   const viewportDebounceRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleVoiceSettingsChange = (next: VoiceSettings) => {
     setVoiceSettings(next);
     saveVoiceSettings(next);
   };
+
+  // Close map options popover on outside click
+  useEffect(() => {
+    if (!showMapMenu) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMapMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showMapMenu]);
 
   // Persist home location & quiz stars
   useEffect(() => {
@@ -130,25 +139,9 @@ export function App() {
     }
   }, [solvedQuizzes, home]);
 
-  // Animate Practice Sky smoothly
-  useEffect(() => {
-    if (skyMode !== 'demo') return;
-    const interval = window.setInterval(() => {
-      setDemoElapsed((prev) => prev + 1.5);
-    }, 1500);
-    return () => window.clearInterval(interval);
-  }, [skyMode]);
-
-  const demoPlanes = useMemo(
-    () => generateDemoFlights(home, demoElapsed),
-    [home, demoElapsed]
-  );
-
-  const activePlanes = skyMode === 'live' ? livePlanes : demoPlanes;
-
   const selectedPlane = useMemo(
-    () => activePlanes.find((p) => p.id === selectedPlaneId) ?? null,
-    [activePlanes, selectedPlaneId]
+    () => livePlanes.find((p) => p.id === selectedPlaneId) ?? null,
+    [livePlanes, selectedPlaneId]
   );
 
   const fetchLiveFlights = useCallback(async () => {
@@ -216,7 +209,7 @@ export function App() {
 
   // Poll live flights every 20s locally (30s in world view), pausing when hidden, on Plane Guide, or idle > 5 min
   useEffect(() => {
-    if (skyMode !== 'live' || tab !== 'map' || isIdlePaused) return;
+    if (tab !== 'map' || isIdlePaused) return;
     let lastFetchedAt = Date.now();
     if (!document.hidden) {
       fetchLiveFlights();
@@ -247,7 +240,7 @@ export function App() {
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [skyMode, tab, isIdlePaused, fetchLiveFlights, scanViewport.zoom]);
+  }, [tab, isIdlePaused, fetchLiveFlights, scanViewport.zoom]);
 
   const handleViewportChange = useCallback(
     (lat: number, lon: number, zoom: number, bounds: ViewportBounds) => {
@@ -264,7 +257,7 @@ export function App() {
 
   // Fetch route/photo details when a live plane is selected
   useEffect(() => {
-    if (!selectedPlane || selectedPlane.isDemo) return;
+    if (!selectedPlane) return;
     const key = `${selectedPlane.hex}:${selectedPlane.callsign}`;
     if (detailsCache[key]) return;
 
@@ -339,8 +332,8 @@ export function App() {
   };
 
   const handleUseMyLocation = () => {
+    setShowMapMenu(false);
     if (!navigator.geolocation) return;
-    playTapPing();
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const nextHome = {
@@ -367,7 +360,6 @@ export function App() {
   };
 
   const handleJumpHome = () => {
-    playTapPing();
     setScanViewport({ lat: home.lat, lon: home.lon, zoom: 10, radiusNm: 50, bounds: null });
     setJumpHomeSeq((prev) => prev + 1);
   };
@@ -386,7 +378,7 @@ export function App() {
           <div className="brand-logo" aria-hidden="true">
             ✈️
           </div>
-          <div>
+          <div className="brand-text">
             <h1 className="brand-title">SkySpotter</h1>
             <p className="brand-sub">KidPlane Live Radar</p>
           </div>
@@ -396,24 +388,22 @@ export function App() {
           <button
             type="button"
             className={`nav-tab-btn ${tab === 'map' ? 'is-active' : ''}`}
-            onClick={() => {
-              playTapPing();
-              setTab('map');
-            }}
+            onClick={() => setTab('map')}
+            aria-label="Sky Map"
+            title="Sky Map"
           >
             <Radar size={20} />
-            <span>Sky Map</span>
+            <span className="nav-tab-label">Sky Map</span>
           </button>
           <button
             type="button"
             className={`nav-tab-btn ${tab === 'guide' ? 'is-active' : ''}`}
-            onClick={() => {
-              playTapPing();
-              setTab('guide');
-            }}
+            onClick={() => setTab('guide')}
+            aria-label="Plane Guide"
+            title="Plane Guide"
           >
             <BookOpen size={20} />
-            <span>Plane Guide</span>
+            <span className="nav-tab-label">Plane Guide</span>
           </button>
         </nav>
 
@@ -421,14 +411,14 @@ export function App() {
           type="button"
           className="btn-voice-settings"
           onClick={() => {
-            playTapPing();
             stopSpeaking();
             setSpeakingId(null);
             setShowVoiceModal(true);
           }}
+          aria-label="Voice Settings"
           title="Choose narrator voice, speed & pitch"
         >
-          <SlidersHorizontal size={17} />
+          <SlidersHorizontal size={18} />
           <span>{voiceSettings.voiceName || 'Voice Settings'}</span>
         </button>
       </header>
@@ -437,38 +427,11 @@ export function App() {
       <main className="main-content">
         {tab === 'map' && (
           <div className="map-workspace">
-            {/* Control Strip */}
+            {/* Compact Control Strip (no horizontal scroll) */}
             <div className="map-controls-bar">
               <div className="controls-left">
-                <div className="mode-toggle" role="group" aria-label="Flight data mode">
-                  <button
-                    type="button"
-                    className={`mode-btn ${skyMode === 'live' ? 'is-active' : ''}`}
-                    onClick={() => {
-                      playTapPing();
-                      setSkyMode('live');
-                      setSelectedPlaneId(null);
-                    }}
-                  >
-                    <Radio size={16} />
-                    <span>Live Sky</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`mode-btn ${skyMode === 'demo' ? 'is-active' : ''}`}
-                    onClick={() => {
-                      playTapPing();
-                      setSkyMode('demo');
-                      setSelectedPlaneId(null);
-                    }}
-                  >
-                    <Sparkles size={16} />
-                    <span>Practice Sky</span>
-                  </button>
-                </div>
-
                 <div className="location-picker">
-                  <MapPin size={17} color="#0284C7" />
+                  <MapPin size={16} color="#0284C7" />
                   <select
                     aria-label="Choose home city"
                     value={home.code}
@@ -494,15 +457,6 @@ export function App() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    className="btn-gps"
-                    onClick={handleUseMyLocation}
-                    title="Use my current location"
-                  >
-                    <Compass size={16} />
-                    <span>Near Me</span>
-                  </button>
                 </div>
 
                 {isExploringAway && (
@@ -510,10 +464,11 @@ export function App() {
                     type="button"
                     className="btn-jump-home"
                     onClick={handleJumpHome}
+                    aria-label={`Back to ${home.name}`}
                     title={`Jump back to ${home.name}`}
                   >
                     <Home size={15} />
-                    <span>Back Home</span>
+                    <span className="hide-mobile">Back Home</span>
                   </button>
                 )}
               </div>
@@ -521,44 +476,73 @@ export function App() {
               <div className="controls-right">
                 <button
                   type="button"
-                  className={`btn-pill-toggle ${showRadarRings ? 'is-on' : ''}`}
-                  onClick={() => setShowRadarRings((prev) => !prev)}
+                  className="btn-pill-toggle"
+                  onClick={fetchLiveFlights}
+                  disabled={loadingFlights}
+                  title="Refresh live radar"
                 >
-                  <Radar size={16} />
-                  <span>Rings</span>
+                  <RefreshCw size={15} className={loadingFlights ? 'spin' : ''} />
+                  <span>{livePlanes.length}</span>
                 </button>
 
-                {skyMode === 'live' && (
+                <div className="map-menu-wrap" ref={menuRef}>
                   <button
                     type="button"
-                    className="btn-pill-toggle"
-                    onClick={fetchLiveFlights}
-                    disabled={loadingFlights}
-                    title="Refresh live radar"
+                    className={`btn-pill-toggle ${showMapMenu ? 'is-on' : ''}`}
+                    onClick={() => setShowMapMenu((prev) => !prev)}
+                    aria-expanded={showMapMenu}
+                    aria-label="Map options"
+                    title="Map options"
                   >
-                    <RefreshCw size={16} className={loadingFlights ? 'spin' : ''} />
-                    <span>{activePlanes.length} planes</span>
+                    <MoreHorizontal size={17} />
+                    <span className="hide-mobile">Options</span>
                   </button>
-                )}
+
+                  {showMapMenu && (
+                    <div className="map-options-popover" role="menu">
+                      <button
+                        type="button"
+                        className="map-option-item"
+                        role="menuitem"
+                        onClick={handleUseMyLocation}
+                      >
+                        <Compass size={16} color="#0284C7" />
+                        <span>Use My Location (Near Me)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="map-option-item"
+                        role="menuitemcheckbox"
+                        aria-checked={showRadarRings}
+                        onClick={() => {
+                          setShowRadarRings((prev) => !prev);
+                          setShowMapMenu(false);
+                        }}
+                      >
+                        <Radar size={16} color="#0284C7" />
+                        <span>Show Radar Rings</span>
+                        {showRadarRings && <Check size={16} className="option-check" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Live error / fallback notice */}
-            {skyMode === 'live' && liveStatus === 'error' && (
+            {/* Live error notice */}
+            {liveStatus === 'error' && (
               <div className="live-fallback-banner">
                 <div>
                   <strong>Live sky radar couldn’t connect right now</strong>
-                  <span> ({liveErrorMsg || 'offline or rate-limited'}). Want to explore animated planes instead?</span>
+                  <span> ({liveErrorMsg || 'offline or rate-limited'})</span>
                 </div>
                 <button
                   type="button"
                   className="btn-switch-demo"
-                  onClick={() => {
-                    playTapPing();
-                    setSkyMode('demo');
-                  }}
+                  onClick={fetchLiveFlights}
                 >
-                  Try Practice Sky!
+                  Retry
                 </button>
               </div>
             )}
@@ -568,7 +552,7 @@ export function App() {
               <div className="map-container-wrap">
                 <SkyMap
                   home={home}
-                  planes={activePlanes}
+                  planes={livePlanes}
                   selectedPlaneId={selectedPlaneId}
                   showRadarRings={showRadarRings}
                   jumpHomeSeq={jumpHomeSeq}
@@ -579,19 +563,17 @@ export function App() {
                 <div className="map-status-chip">
                   <span
                     className={`status-dot ${
-                      skyMode === 'live' && liveStatus === 'ok' && !isIdlePaused ? 'is-live' : 'is-demo'
+                      liveStatus === 'ok' && !isIdlePaused ? 'is-live' : 'is-demo'
                     }`}
                   />
                   <span>
-                    {skyMode === 'live'
-                      ? isIdlePaused
-                        ? 'Radar paused (idle) — click anywhere to resume'
-                        : liveStatus === 'ok'
-                          ? feedSource === 'opensky-world' && globalTotal
-                            ? `🌍 World Sky • ${activePlanes.length} of ${globalTotal.toLocaleString()} flights!`
-                            : `Live Radar (${feedSource}) • Zoom out for whole world!`
-                          : 'Connecting Live Radar...'
-                      : 'Practice Sky (Animated)'}
+                    {isIdlePaused
+                      ? 'Radar paused (idle) — tap to resume'
+                      : liveStatus === 'ok'
+                        ? feedSource === 'opensky-world' && globalTotal
+                          ? `🌍 World Sky • ${livePlanes.length} of ${globalTotal.toLocaleString()} flights!`
+                          : `Live Radar (${feedSource})`
+                        : 'Connecting Live Radar...'}
                   </span>
                 </div>
               </div>
@@ -616,14 +598,14 @@ export function App() {
 
             {/* Bottom Quick-Tap Planes Carousel */}
             <div className="nearby-strip" aria-label="Nearby planes list">
-              {activePlanes.length === 0 ? (
+              {livePlanes.length === 0 ? (
                 <div className="nearby-empty">
                   {loadingFlights
                     ? 'Scanning the sky for airplanes...'
-                    : 'No planes found nearby right now. Try switching to Practice Sky or zooming out!'}
+                    : 'No planes found nearby right now. Try zooming out!'}
                 </div>
               ) : (
-                activePlanes.slice(0, 12).map((plane) => {
+                livePlanes.slice(0, 12).map((plane) => {
                   const cat = CATEGORY_STYLES[plane.category];
                   const active = plane.id === selectedPlaneId;
                   return (

@@ -1706,6 +1706,51 @@ select {
   }
 }
 
+.map-menu-wrap {
+  position: relative;
+}
+
+.map-options-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1500;
+  min-width: 225px;
+  background: #ffffff;
+  border: 2px solid var(--sky-200);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--navy-900);
+  cursor: pointer;
+  text-align: left;
+}
+
+.map-option-item:hover {
+  background: var(--sky-50);
+}
+
+.option-check {
+  margin-left: auto;
+  color: #059669;
+}
+
 @media (max-width: 720px) {
   .app-shell {
     padding: 8px 10px 12px;
@@ -1713,7 +1758,7 @@ select {
   }
 
   .top-nav {
-    padding: 8px 10px;
+    padding: 7px 10px;
     gap: 8px;
     border-radius: 16px;
     flex-wrap: nowrap;
@@ -1738,17 +1783,21 @@ select {
   .main-tabs {
     gap: 6px;
     flex-wrap: nowrap;
+    margin-left: auto;
   }
 
   .nav-tab-btn {
     padding: 7px 10px;
-    font-size: 0.84rem;
-    gap: 5px;
     border-radius: 11px;
   }
 
+  .nav-tab-label,
+  .hide-mobile {
+    display: none;
+  }
+
   .btn-voice-settings {
-    padding: 7px 9px;
+    padding: 7px 10px;
     border-radius: 11px;
     flex-shrink: 0;
   }
@@ -1759,43 +1808,38 @@ select {
 
   .map-controls-bar {
     flex-wrap: nowrap;
-    overflow-x: auto;
     gap: 6px;
-    padding-bottom: 2px;
-    scrollbar-width: none;
   }
 
-  .map-controls-bar::-webkit-scrollbar {
-    display: none;
+  .controls-left {
+    min-width: 0;
+    flex: 1;
+    gap: 6px;
   }
 
-  .controls-left,
   .controls-right {
-    flex-wrap: nowrap;
     flex-shrink: 0;
     gap: 6px;
   }
 
-  .mode-btn {
-    padding: 6px 9px;
-    font-size: 0.8rem;
-  }
-
   .location-picker {
-    padding: 3px 6px 3px 8px;
-    gap: 5px;
+    min-width: 0;
+    flex: 1;
+    padding: 5px 8px;
+    gap: 6px;
   }
 
   .location-picker select {
-    font-size: 0.8rem;
-    max-width: 125px;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.85rem;
   }
 
-  .btn-gps,
   .btn-pill-toggle,
   .btn-jump-home {
-    padding: 6px 9px;
-    font-size: 0.8rem;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+    flex-shrink: 0;
   }
 
   .map-container-wrap,
