@@ -750,21 +750,18 @@ export function App() {
 
                       {showMapMenu && (
                         <div className="map-options-popover" role="menu">
-                          {isFullScreen && (
-                            <button
-                              type="button"
-                              className="map-option-item"
-                              role="menuitem"
-                              onClick={() => {
-                                setShowMapMenu(false);
-                                setIsFullScreen(false);
-                                setTab('guide');
-                              }}
-                            >
-                              <BookOpen size={16} color="#0284C7" />
-                              <span>Plane Guide</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className="map-option-item"
+                            role="menuitem"
+                            onClick={() => {
+                              setShowMapMenu(false);
+                              fetchLiveFlights();
+                            }}
+                          >
+                            <RefreshCw size={16} color="#0284C7" className={loadingFlights ? 'spin' : ''} />
+                            <span>Refresh Radar</span>
+                          </button>
 
                           <button
                             type="button"
@@ -790,21 +787,42 @@ export function App() {
                           </button>
 
                           {isFullScreen && (
-                            <button
-                              type="button"
-                              className="map-option-item"
-                              role="menuitem"
-                              onClick={() => {
-                                setShowMapMenu(false);
-                                stopSpeaking();
-                                setSpeakingId(null);
-                                setShowVoiceModal(true);
-                              }}
-                            >
-                              <SlidersHorizontal size={16} color="#0284C7" />
-                              <span>Voice Settings</span>
-                            </button>
+                            <>
+                              <div className="filter-popover-divider" />
+
+                              <button
+                                type="button"
+                                className="map-option-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  setShowMapMenu(false);
+                                  setIsFullScreen(false);
+                                  setTab('guide');
+                                }}
+                              >
+                                <BookOpen size={16} color="#0284C7" />
+                                <span>Plane Guide</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="map-option-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  setShowMapMenu(false);
+                                  stopSpeaking();
+                                  setSpeakingId(null);
+                                  setShowVoiceModal(true);
+                                }}
+                              >
+                                <SlidersHorizontal size={16} color="#0284C7" />
+                                <span>Voice Settings</span>
+                              </button>
+                            </>
                           )}
+
+                          <div className="filter-popover-divider" />
+                          <div className="menu-section-header">Options</div>
 
                           <button
                             type="button"
@@ -834,19 +852,6 @@ export function App() {
                             <Check size={16} className={`option-check-left ${showTelemetryLabels ? 'is-checked' : ''}`} />
                             <Gauge size={16} color="#0284C7" />
                             <span>Show Speed &amp; Altitude</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            className="map-option-item"
-                            role="menuitem"
-                            onClick={() => {
-                              setShowMapMenu(false);
-                              fetchLiveFlights();
-                            }}
-                          >
-                            <RefreshCw size={16} color="#0284C7" className={loadingFlights ? 'spin' : ''} />
-                            <span>Refresh Radar</span>
                           </button>
                         </div>
                       )}
