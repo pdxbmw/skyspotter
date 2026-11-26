@@ -14,6 +14,8 @@ import {
   Maximize2,
   Minimize2,
   Menu,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { PlaneDetailCard } from './components/PlaneDetailCard';
 import { PlaneGuide } from './components/PlaneGuide';
@@ -103,6 +105,7 @@ export function App() {
   const [showPlanesList, setShowPlanesList] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showStatusDetail, setShowStatusDetail] = useState(false);
+  const [zoomRequest, setZoomRequest] = useState<{ delta: number; seq: number } | null>(null);
 
   const [livePlanes, setLivePlanes] = useState<AircraftTelemetry[]>([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
@@ -607,6 +610,7 @@ export function App() {
                   showRadarRings={showRadarRings}
                   focusTarget={focusTarget}
                   jumpHomeSeq={jumpHomeSeq}
+                  zoomRequest={zoomRequest}
                   onSelectPlane={handleSelectPlane}
                   onViewportChange={handleViewportChange}
                 />
@@ -664,6 +668,27 @@ export function App() {
                     <Maximize2 size={18} />
                   </button>
                 )}
+
+                <div className="map-zoom-controls" role="group" aria-label="Map zoom controls">
+                  <button
+                    type="button"
+                    className="map-zoom-btn"
+                    onClick={() => setZoomRequest({ delta: 1, seq: Date.now() })}
+                    aria-label="Zoom in"
+                    title="Zoom in"
+                  >
+                    <Plus size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    className="map-zoom-btn"
+                    onClick={() => setZoomRequest({ delta: -1, seq: Date.now() })}
+                    aria-label="Zoom out"
+                    title="Zoom out"
+                  >
+                    <Minus size={18} />
+                  </button>
+                </div>
 
                 {isFullScreen && (
                   <div className="fullscreen-floating-bar">

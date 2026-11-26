@@ -26,6 +26,7 @@ interface SkyMapProps {
   showRadarRings: boolean;
   focusTarget?: MapFocusTarget | null;
   jumpHomeSeq?: number;
+  zoomRequest?: { delta: number; seq: number } | null;
   onSelectPlane: (plane: AircraftTelemetry) => void;
   onViewportChange?: (lat: number, lon: number, zoom: number, bounds: ViewportBounds) => void;
 }
@@ -37,6 +38,7 @@ export const SkyMap: React.FC<SkyMapProps> = ({
   showRadarRings,
   focusTarget,
   jumpHomeSeq,
+  zoomRequest,
   onSelectPlane,
   onViewportChange,
 }) => {
@@ -48,6 +50,7 @@ export const SkyMap: React.FC<SkyMapProps> = ({
   const lastHomeKeyRef = useRef<string>('');
   const lastJumpSeqRef = useRef<number>(0);
   const lastFocusSeqRef = useRef<number>(0);
+  const lastZoomSeqRef = useRef<number>(0);
   const viewportCbRef = useRef(onViewportChange);
 
   viewportCbRef.current = onViewportChange;
@@ -69,8 +72,6 @@ export const SkyMap: React.FC<SkyMapProps> = ({
       attribution: 'Tiles &copy; Esri',
       maxZoom: 18,
     }).addTo(map);
-
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     ringsLayerRef.current = L.layerGroup().addTo(map);
     homeLayerRef.current = L.layerGroup().addTo(map);
@@ -167,6 +168,18 @@ export const SkyMap: React.FC<SkyMapProps> = ({
     const targetZoom = focusTarget.zoom ?? Math.max(map.getZoom(), 10);
     map.setView([focusTarget.lat, focusTarget.lon], targetZoom, { animate: true });
   }, [focusTarget]);
+
+  // Handle custom +/- zoom button clicks
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !zoomRequest || zoomRequest.seq === lastZoomSeqRef.current) return;
+    lastZoomSeqRef.current = zoomRequest.seq;
+    if (zoomRequest.delta > 0) {
+      map.zoomIn();
+    } else {
+      map.zoomOut();
+    }
+  }, [zoomRequest]);
 
   // Update plane markers
   useEffect(() => {
