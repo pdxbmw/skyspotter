@@ -102,6 +102,7 @@ export function App() {
   const [showMapMenu, setShowMapMenu] = useState(false);
   const [showPlanesList, setShowPlanesList] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [showStatusDetail, setShowStatusDetail] = useState(false);
 
   const [livePlanes, setLivePlanes] = useState<AircraftTelemetry[]>([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
@@ -610,22 +611,44 @@ export function App() {
                   onViewportChange={handleViewportChange}
                 />
 
-                <div className="map-status-chip">
+                <button
+                  type="button"
+                  className={`map-status-chip ${showStatusDetail ? 'is-expanded' : ''}`}
+                  onClick={() => setShowStatusDetail((prev) => !prev)}
+                  aria-expanded={showStatusDetail}
+                  title="Tap for radar status details"
+                >
                   <span
                     className={`status-dot ${
                       liveStatus === 'ok' && !isIdlePaused ? 'is-live' : 'is-demo'
                     }`}
                   />
-                  <span>
-                    {isIdlePaused
-                      ? 'Radar paused (idle) — tap to resume'
-                      : liveStatus === 'ok'
-                        ? feedSource === 'opensky-world' && globalTotal
-                          ? `🌍 World Sky • ${livePlanes.length} of ${globalTotal.toLocaleString()} flights!`
-                          : `Live Radar (${feedSource})`
-                        : 'Connecting Live Radar...'}
-                  </span>
-                </div>
+                  {showStatusDetail ? (
+                    <span>
+                      {isIdlePaused
+                        ? 'Radar paused (idle) — tap map to resume'
+                        : liveStatus === 'ok'
+                          ? feedSource === 'opensky-world' && globalTotal
+                            ? `World Sky • ${livePlanes.length} of ${globalTotal.toLocaleString()} flights`
+                            : `Live Radar (${feedSource}) • ${livePlanes.length} planes`
+                          : liveStatus === 'error'
+                            ? 'Radar offline — tap Retry'
+                            : 'Connecting Live Radar...'}
+                    </span>
+                  ) : (
+                    <span className="status-short-label">
+                      {isIdlePaused
+                        ? 'Paused'
+                        : liveStatus === 'ok'
+                          ? feedSource === 'opensky-world'
+                            ? 'World'
+                            : 'Live'
+                          : liveStatus === 'error'
+                            ? 'Offline'
+                            : '...'}
+                    </span>
+                  )}
+                </button>
 
                 {!isFullScreen && (
                   <button

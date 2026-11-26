@@ -1974,6 +1974,45 @@ select {
   border-color: var(--sky-500);
 }
 
+/* Match Leaflet +/- zoom controls to our map buttons */
+.leaflet-control-zoom {
+  border: 2px solid var(--sky-200) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14) !important;
+  margin-right: 12px !important;
+  margin-bottom: 12px !important;
+}
+
+.leaflet-control-zoom a {
+  width: 38px !important;
+  height: 38px !important;
+  line-height: 36px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(6px);
+  color: var(--navy-900) !important;
+  font-family: 'Fredoka', 'Nunito', sans-serif !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid var(--sky-100) !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #ffffff !important;
+  color: var(--sky-700) !important;
+}
+
+button.map-status-chip {
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  max-width: calc(100% - 76px);
+  text-align: left;
+}
+
 .fullscreen-floating-bar {
   position: absolute;
   top: 12px;
