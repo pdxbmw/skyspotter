@@ -9,10 +9,12 @@ import {
   SlidersHorizontal,
   MoreHorizontal,
   Check,
+  Plane,
+  X,
 } from 'lucide-react';
 import { PlaneDetailCard } from './components/PlaneDetailCard';
 import { PlaneGuide } from './components/PlaneGuide';
-import { SkyMap, ViewportBounds } from './components/SkyMap';
+import { MapFocusTarget, SkyMap, ViewportBounds } from './components/SkyMap';
 import { VoiceSettingsModal } from './components/VoiceSettingsModal';
 import { HomeAddressModal } from './components/HomeAddressModal';
 import {
@@ -85,8 +87,10 @@ export function App() {
     bounds: null,
   });
   const [jumpHomeSeq, setJumpHomeSeq] = useState(0);
+  const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [showRadarRings, setShowRadarRings] = useState(true);
   const [showMapMenu, setShowMapMenu] = useState(false);
+  const [showPlanesList, setShowPlanesList] = useState(false);
 
   const [livePlanes, setLivePlanes] = useState<AircraftTelemetry[]>([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
@@ -483,13 +487,23 @@ export function App() {
               <div className="controls-right">
                 <button
                   type="button"
+                  className={`btn-pill-toggle ${showPlanesList ? 'is-on' : ''}`}
+                  onClick={() => setShowPlanesList(true)}
+                  title="View nearby planes list"
+                >
+                  <Plane size={15} />
+                  <span>{livePlanes.length}</span>
+                </button>
+
+                <button
+                  type="button"
                   className="btn-pill-toggle"
                   onClick={fetchLiveFlights}
                   disabled={loadingFlights}
+                  aria-label="Refresh live radar"
                   title="Refresh live radar"
                 >
                   <RefreshCw size={15} className={loadingFlights ? 'spin' : ''} />
-                  <span>{livePlanes.length}</span>
                 </button>
 
                 <div className="map-menu-wrap" ref={menuRef}>
@@ -575,6 +589,7 @@ export function App() {
                   planes={livePlanes}
                   selectedPlaneId={selectedPlaneId}
                   showRadarRings={showRadarRings}
+                  focusTarget={focusTarget}
                   jumpHomeSeq={jumpHomeSeq}
                   onSelectPlane={handleSelectPlane}
                   onViewportChange={handleViewportChange}
@@ -615,42 +630,6 @@ export function App() {
                 />
               )}
             </div>
-
-            {/* Bottom Quick-Tap Planes Carousel */}
-            <div className="nearby-strip" aria-label="Nearby planes list">
-              {livePlanes.length === 0 ? (
-                <div className="nearby-empty">
-                  {loadingFlights
-                    ? 'Scanning the sky for airplanes...'
-                    : 'No planes found nearby right now. Try zooming out!'}
-                </div>
-              ) : (
-                livePlanes.slice(0, 12).map((plane) => {
-                  const cat = CATEGORY_STYLES[plane.category];
-                  const active = plane.id === selectedPlaneId;
-                  return (
-                    <button
-                      key={plane.id}
-                      type="button"
-                      className={`nearby-plane-chip ${active ? 'is-active' : ''}`}
-                      onClick={() => handleSelectPlane(plane)}
-                    >
-                      <span className="chip-emoji" style={{ backgroundColor: cat.bg }}>
-                        {cat.emoji}
-                      </span>
-                      <div className="chip-text">
-                        <div className="chip-top">
-                          <strong>{plane.callsign}</strong>
-                        </div>
-                        <span className="chip-sub">
-                          {plane.distanceMiles} mi • {plane.friendlyModel}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
           </div>
         )}
 
@@ -671,6 +650,69 @@ export function App() {
           onChange={handleVoiceSettingsChange}
           onClose={() => setShowVoiceModal(false)}
         />
+      )}
+
+      {showPlanesList && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nearby-modal-title">
+          <div className="voice-modal-card nearby-modal-card">
+            <div className="voice-modal-header">
+              <div>
+                <h2 id="nearby-modal-title">✈️ Planes in the Sky ({livePlanes.length})</h2>
+                <p>Sorted closest to {home.name}. Tap one to zoom &amp; learn more.</p>
+              </div>
+              <button
+                type="button"
+                className="detail-close-btn"
+                onClick={() => setShowPlanesList(false)}
+                aria-label="Close planes list"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {livePlanes.length === 0 ? (
+              <div className="nearby-empty">
+                {loadingFlights
+                  ? 'Scanning the sky for airplanes...'
+                  : 'No planes found nearby right now. Try zooming out!'}
+              </div>
+            ) : (
+              <div className="nearby-vertical-list">
+                {livePlanes.slice(0, 30).map((plane) => {
+                  const cat = CATEGORY_STYLES[plane.category];
+                  const active = plane.id === selectedPlaneId;
+                  return (
+                    <button
+                      key={plane.id}
+                      type="button"
+                      className={`nearby-vertical-row ${active ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setShowPlanesList(false);
+                        handleSelectPlane(plane);
+                        setFocusTarget({ lat: plane.lat, lon: plane.lon, seq: Date.now() });
+                      }}
+                    >
+                      <span className="chip-emoji" style={{ backgroundColor: cat.bg }}>
+                        {cat.emoji}
+                      </span>
+                      <div className="nearby-row-main">
+                        <div className="nearby-row-top">
+                          <strong>{plane.callsign}</strong>
+                          <span className="nearby-row-model">{plane.friendlyModel}</span>
+                        </div>
+                        <span className="nearby-row-sub">
+                          {plane.distanceMiles} mi {plane.bearingCardinal}
+                          {plane.altitudeFt ? ` • ${plane.altitudeFt.toLocaleString()} ft` : ''}
+                          {plane.speedMph ? ` • ${plane.speedMph} mph` : ''}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {showHomeModal && (
