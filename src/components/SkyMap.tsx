@@ -24,6 +24,7 @@ interface SkyMapProps {
   planes: AircraftTelemetry[];
   selectedPlaneId: string | null;
   showRadarRings: boolean;
+  showTelemetryLabels?: boolean;
   focusTarget?: MapFocusTarget | null;
   jumpHomeSeq?: number;
   zoomRequest?: { delta: number; seq: number } | null;
@@ -36,6 +37,7 @@ export const SkyMap: React.FC<SkyMapProps> = ({
   planes,
   selectedPlaneId,
   showRadarRings,
+  showTelemetryLabels = false,
   focusTarget,
   jumpHomeSeq,
   zoomRequest,
@@ -193,13 +195,33 @@ export const SkyMap: React.FC<SkyMapProps> = ({
       const catColor = CATEGORY_STYLES[plane.category].color;
       const svg = createMapPlaneSvg(plane.category, catColor, isSelected);
 
+      const vertArrow =
+        !plane.onGround && plane.verticalRateFpm > 350
+          ? '<span class="vert-arrow is-up">↗</span>'
+          : !plane.onGround && plane.verticalRateFpm < -350
+            ? '<span class="vert-arrow is-down">↘</span>'
+            : '';
+
+      const altText =
+        plane.altitudeFt !== null
+          ? plane.altitudeFt >= 10000
+            ? `${Math.round(plane.altitudeFt / 1000)}k ft`
+            : `${plane.altitudeFt.toLocaleString()} ft`
+          : '';
+      const spdText = plane.speedMph !== null ? `${plane.speedMph} mph` : '';
+      const telemetryLine =
+        showTelemetryLabels && !plane.onGround && (altText || spdText)
+          ? `<div class="map-plane-telemetry">${[altText, spdText].filter(Boolean).join(' • ')}</div>`
+          : '';
+
       const iconHtml = `
-        <div class="map-plane-marker ${isSelected ? 'is-selected' : ''} ${isClosest ? 'is-closest' : ''}">
+        <div class="map-plane-marker ${isSelected ? 'is-selected' : ''} ${isClosest ? 'is-closest' : ''} ${plane.onGround ? 'is-ground' : ''}">
           <div class="map-plane-rotator" style="transform: rotate(${plane.trackDeg}deg);">
             ${svg}
           </div>
           <div class="map-plane-label">
-            ${plane.callsign}
+            <div class="map-plane-callsign">${vertArrow}${plane.callsign}</div>
+            ${telemetryLine}
           </div>
         </div>
       `;
@@ -213,7 +235,7 @@ export const SkyMap: React.FC<SkyMapProps> = ({
 
       const marker = L.marker([plane.lat, plane.lon], {
         icon,
-        zIndexOffset: isSelected ? 1000 : isClosest ? 500 : 100,
+        zIndexOffset: isSelected ? 1000 : plane.onGround ? 10 : isClosest ? 500 : 100,
       });
 
       marker.on('click', () => {
@@ -222,7 +244,7 @@ export const SkyMap: React.FC<SkyMapProps> = ({
 
       marker.addTo(planesLayer);
     });
-  }, [planes, selectedPlaneId, onSelectPlane]);
+  }, [planes, selectedPlaneId, showTelemetryLabels, onSelectPlane]);
 
   return <div ref={containerRef} className="sky-map-canvas" aria-label="Interactive live airplane map" />;
 };

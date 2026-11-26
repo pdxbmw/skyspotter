@@ -16,6 +16,7 @@ import {
   Menu,
   Plus,
   Minus,
+  Gauge,
 } from 'lucide-react';
 import { PlaneDetailCard } from './components/PlaneDetailCard';
 import { PlaneGuide } from './components/PlaneGuide';
@@ -101,6 +102,7 @@ export function App() {
   const [jumpHomeSeq, setJumpHomeSeq] = useState(0);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [showRadarRings, setShowRadarRings] = useState(true);
+  const [showTelemetryLabels, setShowTelemetryLabels] = useState(false);
   const [showMapMenu, setShowMapMenu] = useState(false);
   const [showPlanesList, setShowPlanesList] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -577,6 +579,21 @@ export function App() {
                         <span>Show Radar Rings</span>
                         {showRadarRings && <Check size={16} className="option-check" />}
                       </button>
+
+                      <button
+                        type="button"
+                        className="map-option-item"
+                        role="menuitemcheckbox"
+                        aria-checked={showTelemetryLabels}
+                        onClick={() => {
+                          setShowTelemetryLabels((prev) => !prev);
+                          setShowMapMenu(false);
+                        }}
+                      >
+                        <Gauge size={16} color="#0284C7" />
+                        <span>Show Speed &amp; Altitude</span>
+                        {showTelemetryLabels && <Check size={16} className="option-check" />}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -608,6 +625,7 @@ export function App() {
                   planes={livePlanes}
                   selectedPlaneId={selectedPlaneId}
                   showRadarRings={showRadarRings}
+                  showTelemetryLabels={showTelemetryLabels}
                   focusTarget={focusTarget}
                   jumpHomeSeq={jumpHomeSeq}
                   zoomRequest={zoomRequest}
@@ -654,40 +672,40 @@ export function App() {
                   )}
                 </button>
 
-                {!isFullScreen && (
+                <div className="map-bottom-right-controls">
                   <button
                     type="button"
                     className="map-fullscreen-btn"
                     onClick={() => {
                       setShowMapMenu(false);
-                      setIsFullScreen(true);
+                      setIsFullScreen((prev) => !prev);
                     }}
-                    aria-label="Full screen map"
-                    title="Full screen map"
+                    aria-label={isFullScreen ? 'Exit full screen' : 'Full screen map'}
+                    title={isFullScreen ? 'Exit full screen' : 'Full screen map'}
                   >
-                    <Maximize2 size={18} />
+                    {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                   </button>
-                )}
 
-                <div className="map-zoom-controls" role="group" aria-label="Map zoom controls">
-                  <button
-                    type="button"
-                    className="map-zoom-btn"
-                    onClick={() => setZoomRequest({ delta: 1, seq: Date.now() })}
-                    aria-label="Zoom in"
-                    title="Zoom in"
-                  >
-                    <Plus size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    className="map-zoom-btn"
-                    onClick={() => setZoomRequest({ delta: -1, seq: Date.now() })}
-                    aria-label="Zoom out"
-                    title="Zoom out"
-                  >
-                    <Minus size={18} />
-                  </button>
+                  <div className="map-zoom-controls" role="group" aria-label="Map zoom controls">
+                    <button
+                      type="button"
+                      className="map-zoom-btn"
+                      onClick={() => setZoomRequest({ delta: 1, seq: Date.now() })}
+                      aria-label="Zoom in"
+                      title="Zoom in"
+                    >
+                      <Plus size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className="map-zoom-btn"
+                      onClick={() => setZoomRequest({ delta: -1, seq: Date.now() })}
+                      aria-label="Zoom out"
+                      title="Zoom out"
+                    >
+                      <Minus size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 {isFullScreen && (
@@ -799,6 +817,21 @@ export function App() {
                           <button
                             type="button"
                             className="map-option-item"
+                            role="menuitemcheckbox"
+                            aria-checked={showTelemetryLabels}
+                            onClick={() => {
+                              setShowTelemetryLabels((prev) => !prev);
+                              setShowMapMenu(false);
+                            }}
+                          >
+                            <Gauge size={16} color="#0284C7" />
+                            <span>Show Speed &amp; Altitude</span>
+                            {showTelemetryLabels && <Check size={16} className="option-check" />}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="map-option-item"
                             role="menuitem"
                             onClick={() => {
                               setShowMapMenu(false);
@@ -811,19 +844,6 @@ export function App() {
                         </div>
                       )}
                     </div>
-
-                    <button
-                      type="button"
-                      className="fs-pill-btn"
-                      onClick={() => {
-                        setShowMapMenu(false);
-                        setIsFullScreen(false);
-                      }}
-                      aria-label="Exit full screen"
-                      title="Exit full screen"
-                    >
-                      <Minimize2 size={16} />
-                    </button>
                   </div>
                 )}
               </div>
