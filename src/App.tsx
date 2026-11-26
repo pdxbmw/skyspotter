@@ -643,52 +643,52 @@ export function App() {
                 </div>
 
                 <div className="map-top-overlay">
-                  <div className="location-picker map-overlay-location">
-                    <MapPin size={16} color="#0284C7" />
-                    <select
-                      aria-label="Choose home city"
-                      value={selectedLocationCode}
-                      onChange={(e) => {
-                        if (e.target.value === '__SET_HOME__') {
-                          setShowHomeModal(true);
-                          return;
-                        }
-                        if (e.target.value === 'HOME') {
-                          handleJumpHome();
-                          setSelectedPlaneId(null);
-                          return;
-                        }
-                        const preset = LOCATION_PRESETS.find((l) => l.code === e.target.value);
-                        if (preset) {
-                          setSelectedLocationCode(preset.code);
-                          setFocusTarget({
-                            lat: preset.lat,
-                            lon: preset.lon,
-                            zoom: 10,
-                            seq: Date.now(),
-                          });
-                          setScanViewport({
-                            lat: preset.lat,
-                            lon: preset.lon,
-                            zoom: 10,
-                            radiusNm: 50,
-                            bounds: null,
-                          });
-                          setSelectedPlaneId(null);
-                        }
-                      }}
-                    >
-                      {home.code === 'HOME' && <option value="HOME">🏠 {home.name}</option>}
-                      <option value="__SET_HOME__">🏠 Set Home Address...</option>
-                      {LOCATION_PRESETS.map((loc) => (
-                        <option key={loc.code} value={loc.code}>
-                          {loc.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <div className="map-top-left">
+                    <div className="location-picker map-overlay-location">
+                      <MapPin size={16} color="#0284C7" />
+                      <select
+                        aria-label="Choose home city"
+                        value={selectedLocationCode}
+                        onChange={(e) => {
+                          if (e.target.value === '__SET_HOME__') {
+                            setShowHomeModal(true);
+                            return;
+                          }
+                          if (e.target.value === 'HOME') {
+                            handleJumpHome();
+                            setSelectedPlaneId(null);
+                            return;
+                          }
+                          const preset = LOCATION_PRESETS.find((l) => l.code === e.target.value);
+                          if (preset) {
+                            setSelectedLocationCode(preset.code);
+                            setFocusTarget({
+                              lat: preset.lat,
+                              lon: preset.lon,
+                              zoom: 10,
+                              seq: Date.now(),
+                            });
+                            setScanViewport({
+                              lat: preset.lat,
+                              lon: preset.lon,
+                              zoom: 10,
+                              radiusNm: 50,
+                              bounds: null,
+                            });
+                            setSelectedPlaneId(null);
+                          }
+                        }}
+                      >
+                        {home.code === 'HOME' && <option value="HOME">🏠 {home.name}</option>}
+                        <option value="__SET_HOME__">🏠 Set Home Address...</option>
+                        {LOCATION_PRESETS.map((loc) => (
+                          <option key={loc.code} value={loc.code}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="fullscreen-floating-bar">
                     {isExploringAway && (
                       <button
                         type="button"
@@ -701,7 +701,9 @@ export function App() {
                         <span className="hide-mobile">Back Home</span>
                       </button>
                     )}
+                  </div>
 
+                  <div className="fullscreen-floating-bar">
                     <div className="map-menu-wrap" ref={filterRef}>
                       <button
                         type="button"
@@ -725,21 +727,10 @@ export function App() {
                       className={`fs-pill-btn ${showPlanesList ? 'is-on' : ''}`}
                       onClick={() => setShowPlanesList(true)}
                       aria-label="View nearby planes"
-                      title="View nearby planes"
+                      title="View nearby planes list"
                     >
                       <Plane size={18} />
                       <span>{filteredPlanes.length}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="fs-pill-btn"
-                      onClick={fetchLiveFlights}
-                      disabled={loadingFlights}
-                      aria-label="Refresh live radar"
-                      title="Refresh live radar"
-                    >
-                      <RefreshCw size={18} className={loadingFlights ? 'spin' : ''} />
                     </button>
 
                     <div className="map-menu-wrap" ref={menuRef}>
@@ -843,6 +834,19 @@ export function App() {
                             <Check size={16} className={`option-check-left ${showTelemetryLabels ? 'is-checked' : ''}`} />
                             <Gauge size={16} color="#0284C7" />
                             <span>Show Speed &amp; Altitude</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="map-option-item"
+                            role="menuitem"
+                            onClick={() => {
+                              setShowMapMenu(false);
+                              fetchLiveFlights();
+                            }}
+                          >
+                            <RefreshCw size={16} color="#0284C7" className={loadingFlights ? 'spin' : ''} />
+                            <span>Refresh Radar</span>
                           </button>
                         </div>
                       )}
