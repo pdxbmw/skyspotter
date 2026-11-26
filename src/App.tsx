@@ -521,19 +521,6 @@ export function App() {
                   <RefreshCw size={15} className={loadingFlights ? 'spin' : ''} />
                 </button>
 
-                <button
-                  type="button"
-                  className="btn-pill-toggle"
-                  onClick={() => {
-                    setShowMapMenu(false);
-                    setIsFullScreen(true);
-                  }}
-                  aria-label="Full screen map"
-                  title="Full screen map"
-                >
-                  <Maximize2 size={15} />
-                </button>
-
                 <div className="map-menu-wrap" ref={menuRef}>
                   <button
                     type="button"
@@ -639,6 +626,21 @@ export function App() {
                         : 'Connecting Live Radar...'}
                   </span>
                 </div>
+
+                {!isFullScreen && (
+                  <button
+                    type="button"
+                    className="map-fullscreen-btn"
+                    onClick={() => {
+                      setShowMapMenu(false);
+                      setIsFullScreen(true);
+                    }}
+                    aria-label="Full screen map"
+                    title="Full screen map"
+                  >
+                    <Maximize2 size={18} />
+                  </button>
+                )}
 
                 {isFullScreen && (
                   <div className="fullscreen-floating-bar">
