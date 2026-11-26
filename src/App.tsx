@@ -54,9 +54,16 @@ function loadInitialState(): PersistedState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<PersistedState>;
+      const savedHome =
+        parsed.home?.lat && parsed.home?.lon
+          ? {
+              ...parsed.home,
+              name: parsed.home.name.replace(/^(\d+[a-zA-Z-]*),\s+/, '$1 '),
+            }
+          : LOCATION_PRESETS[0];
       return {
         solvedQuizzes: Array.isArray(parsed.solvedQuizzes) ? parsed.solvedQuizzes : [],
-        home: parsed.home?.lat && parsed.home?.lon ? parsed.home : LOCATION_PRESETS[0],
+        home: savedHome,
       };
     }
   } catch {

@@ -57,7 +57,10 @@ export const HomeAddressModal: React.FC<HomeAddressModalProps> = ({
   };
 
   const formatShortName = (fullLabel: string) => {
-    const parts = fullLabel.split(',').map((s) => s.trim());
+    const parts = fullLabel.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2 && /^\d+[a-zA-Z-]*$/.test(parts[0])) {
+      return `${parts[0]} ${parts[1]}`;
+    }
     return parts.slice(0, 2).join(', ') || fullLabel;
   };
 
