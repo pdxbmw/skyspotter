@@ -82,6 +82,8 @@ function loadInitialState(): PersistedState {
   };
 }
 
+const ALL_CATEGORIES = Object.keys(CATEGORY_STYLES) as PlaneCategory[];
+
 export function App() {
   const initial = useMemo(() => loadInitialState(), []);
 
@@ -106,7 +108,7 @@ export function App() {
   const [showTelemetryLabels, setShowTelemetryLabels] = useState(true);
   const [showMapMenu, setShowMapMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<PlaneCategory[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<PlaneCategory[]>(ALL_CATEGORIES);
   const [showPlanesList, setShowPlanesList] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showStatusDetail, setShowStatusDetail] = useState(false);
@@ -164,12 +166,15 @@ export function App() {
     return counts;
   }, [livePlanes]);
 
+  const allCategoriesSelected = selectedCategories.length === ALL_CATEGORIES.length;
+  const isCategoryFiltered = !allCategoriesSelected;
+
   const filteredPlanes = useMemo(
     () =>
-      selectedCategories.length === 0
+      allCategoriesSelected
         ? livePlanes
         : livePlanes.filter((p) => selectedCategories.includes(p.category)),
-    [livePlanes, selectedCategories]
+    [livePlanes, selectedCategories, allCategoriesSelected]
   );
 
   const toggleCategory = (cat: PlaneCategory) => {
@@ -184,22 +189,19 @@ export function App() {
         type="button"
         className="map-option-item"
         role="menuitemcheckbox"
-        aria-checked={selectedCategories.length === 0}
-        onClick={() => {
-          setSelectedCategories([]);
-          setShowFilterMenu(false);
-        }}
+        aria-checked={allCategoriesSelected}
+        onClick={() => setSelectedCategories(allCategoriesSelected ? [] : ALL_CATEGORIES)}
       >
         <Check
           size={16}
-          className={`option-check-left ${selectedCategories.length === 0 ? 'is-checked' : ''}`}
+          className={`option-check-left ${allCategoriesSelected ? 'is-checked' : ''}`}
         />
         <span>✨</span>
         <span>All Aircraft</span>
         <span className="filter-count-pill">{livePlanes.length}</span>
       </button>
       <div className="filter-popover-divider" />
-      {(Object.keys(CATEGORY_STYLES) as PlaneCategory[]).map((cat) => {
+      {ALL_CATEGORIES.map((cat) => {
         const info = CATEGORY_STYLES[cat];
         const checked = selectedCategories.includes(cat);
         return (
@@ -689,7 +691,7 @@ export function App() {
                     <div className="map-menu-wrap" ref={filterRef}>
                       <button
                         type="button"
-                        className={`fs-pill-btn ${selectedCategories.length > 0 || showFilterMenu ? 'is-on' : ''}`}
+                        className={`fs-pill-btn ${isCategoryFiltered || showFilterMenu ? 'is-on' : ''}`}
                         onClick={() => {
                           setShowMapMenu(false);
                           setShowFilterMenu((prev) => !prev);
@@ -699,7 +701,7 @@ export function App() {
                         title="Filter by aircraft type"
                       >
                         <Filter size={18} />
-                        {selectedCategories.length > 0 && <span>{selectedCategories.length}</span>}
+                        {isCategoryFiltered && <span>{selectedCategories.length}</span>}
                       </button>
                       {showFilterMenu && renderFilterPopover()}
                     </div>
@@ -896,7 +898,7 @@ export function App() {
               <div className="nearby-empty">
                 {loadingFlights
                   ? 'Scanning the sky for airplanes...'
-                  : selectedCategories.length > 0
+                  : isCategoryFiltered
                     ? 'No aircraft match your current filter.'
                     : 'No planes found nearby right now. Try zooming out!'}
               </div>
