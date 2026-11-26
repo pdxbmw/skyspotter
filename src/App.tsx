@@ -7,7 +7,6 @@ import {
   Compass,
   Home,
   SlidersHorizontal,
-  MoreHorizontal,
   Check,
   Plane,
   X,
@@ -530,178 +529,6 @@ export function App() {
       <main className="main-content">
         {tab === 'map' && (
           <div className="map-workspace">
-            {/* Compact Control Strip (no horizontal scroll) */}
-            <div className="map-controls-bar">
-              <div className="controls-left">
-                <div className="location-picker">
-                  <MapPin size={16} color="#0284C7" />
-                  <select
-                    aria-label="Choose home city"
-                    value={home.code}
-                    onChange={(e) => {
-                      if (e.target.value === '__SET_HOME__') {
-                        setShowHomeModal(true);
-                        return;
-                      }
-                      const preset = LOCATION_PRESETS.find((l) => l.code === e.target.value);
-                      if (preset) {
-                        setHome(preset);
-                        setScanViewport({
-                          lat: preset.lat,
-                          lon: preset.lon,
-                          zoom: 10,
-                          radiusNm: 50,
-                          bounds: null,
-                        });
-                        setSelectedPlaneId(null);
-                      }
-                    }}
-                  >
-                    {home.code === 'HOME' && <option value="HOME">🏠 {home.name}</option>}
-                    <option value="__SET_HOME__">🏠 Set Home Address...</option>
-                    {LOCATION_PRESETS.map((loc) => (
-                      <option key={loc.code} value={loc.code}>
-                        {loc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {isExploringAway && (
-                  <button
-                    type="button"
-                    className="btn-jump-home"
-                    onClick={handleJumpHome}
-                    aria-label={`Back to ${home.name}`}
-                    title={`Jump back to ${home.name}`}
-                  >
-                    <Home size={15} />
-                    <span className="hide-mobile">Back Home</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="controls-right">
-                <div className="map-menu-wrap" ref={isFullScreen ? undefined : filterRef}>
-                  <button
-                    type="button"
-                    className={`btn-pill-toggle ${selectedCategories.length > 0 || showFilterMenu ? 'is-on' : ''}`}
-                    onClick={() => {
-                      setShowMapMenu(false);
-                      setShowFilterMenu((prev) => !prev);
-                    }}
-                    aria-expanded={showFilterMenu}
-                    aria-label="Filter by aircraft type"
-                    title="Filter by aircraft type"
-                  >
-                    <Filter size={15} />
-                    <span className="hide-mobile">
-                      {selectedCategories.length > 0 ? `Filter (${selectedCategories.length})` : 'Filter'}
-                    </span>
-                  </button>
-                  {showFilterMenu && !isFullScreen && renderFilterPopover()}
-                </div>
-
-                <button
-                  type="button"
-                  className={`btn-pill-toggle ${showPlanesList ? 'is-on' : ''}`}
-                  onClick={() => setShowPlanesList(true)}
-                  title="View nearby planes list"
-                >
-                  <Plane size={15} />
-                  <span>{filteredPlanes.length}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-pill-toggle"
-                  onClick={fetchLiveFlights}
-                  disabled={loadingFlights}
-                  aria-label="Refresh live radar"
-                  title="Refresh live radar"
-                >
-                  <RefreshCw size={15} className={loadingFlights ? 'spin' : ''} />
-                </button>
-
-                <div className="map-menu-wrap" ref={menuRef}>
-                  <button
-                    type="button"
-                    className={`btn-pill-toggle ${showMapMenu ? 'is-on' : ''}`}
-                    onClick={() => setShowMapMenu((prev) => !prev)}
-                    aria-expanded={showMapMenu}
-                    aria-label="Map options"
-                    title="Map options"
-                  >
-                    <MoreHorizontal size={17} />
-                    <span className="hide-mobile">Options</span>
-                  </button>
-
-                  {showMapMenu && (
-                    <div className="map-options-popover" role="menu">
-                      <button
-                        type="button"
-                        className="map-option-item"
-                        role="menuitem"
-                        onClick={() => {
-                          setShowMapMenu(false);
-                          setShowHomeModal(true);
-                        }}
-                      >
-                        <Home size={16} color="#0284C7" />
-                        <span>Set Home Address</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="map-option-item"
-                        role="menuitem"
-                        onClick={handleUseMyLocation}
-                      >
-                        <Compass size={16} color="#0284C7" />
-                        <span>Use My Location (GPS)</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="map-option-item"
-                        role="menuitemcheckbox"
-                        aria-checked={showRadarRings}
-                        onClick={() => {
-                          setShowRadarRings((prev) => !prev);
-                          setShowMapMenu(false);
-                        }}
-                      >
-                        <Check
-                          size={16}
-                          className={`option-check-left ${showRadarRings ? 'is-checked' : ''}`}
-                        />
-                        <Radar size={16} color="#0284C7" />
-                        <span>Show Radar Rings</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="map-option-item"
-                        role="menuitemcheckbox"
-                        aria-checked={showTelemetryLabels}
-                        onClick={() => {
-                          setShowTelemetryLabels((prev) => !prev);
-                          setShowMapMenu(false);
-                        }}
-                      >
-                        <Check
-                          size={16}
-                          className={`option-check-left ${showTelemetryLabels ? 'is-checked' : ''}`}
-                        />
-                        <Gauge size={16} color="#0284C7" />
-                        <span>Show Speed &amp; Altitude</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Live error notice */}
             {liveStatus === 'error' && (
               <div className="live-fallback-banner">
@@ -810,21 +637,56 @@ export function App() {
                   </div>
                 </div>
 
-                {isFullScreen && (
+                <div className="map-top-overlay">
+                  <div className="location-picker map-overlay-location">
+                    <MapPin size={16} color="#0284C7" />
+                    <select
+                      aria-label="Choose home city"
+                      value={home.code}
+                      onChange={(e) => {
+                        if (e.target.value === '__SET_HOME__') {
+                          setShowHomeModal(true);
+                          return;
+                        }
+                        const preset = LOCATION_PRESETS.find((l) => l.code === e.target.value);
+                        if (preset) {
+                          setHome(preset);
+                          setScanViewport({
+                            lat: preset.lat,
+                            lon: preset.lon,
+                            zoom: 10,
+                            radiusNm: 50,
+                            bounds: null,
+                          });
+                          setSelectedPlaneId(null);
+                        }
+                      }}
+                    >
+                      {home.code === 'HOME' && <option value="HOME">🏠 {home.name}</option>}
+                      <option value="__SET_HOME__">🏠 Set Home Address...</option>
+                      {LOCATION_PRESETS.map((loc) => (
+                        <option key={loc.code} value={loc.code}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="fullscreen-floating-bar">
                     {isExploringAway && (
                       <button
                         type="button"
-                        className="fs-pill-btn"
+                        className="fs-pill-btn btn-back-home-overlay"
                         onClick={handleJumpHome}
                         aria-label={`Back to ${home.name}`}
                         title={`Back to ${home.name}`}
                       >
                         <Home size={18} />
+                        <span className="hide-mobile">Back Home</span>
                       </button>
                     )}
 
-                    <div className="map-menu-wrap" ref={isFullScreen ? filterRef : undefined}>
+                    <div className="map-menu-wrap" ref={filterRef}>
                       <button
                         type="button"
                         className={`fs-pill-btn ${selectedCategories.length > 0 || showFilterMenu ? 'is-on' : ''}`}
@@ -837,13 +699,14 @@ export function App() {
                         title="Filter by aircraft type"
                       >
                         <Filter size={18} />
+                        {selectedCategories.length > 0 && <span>{selectedCategories.length}</span>}
                       </button>
-                      {showFilterMenu && isFullScreen && renderFilterPopover()}
+                      {showFilterMenu && renderFilterPopover()}
                     </div>
 
                     <button
                       type="button"
-                      className="fs-pill-btn"
+                      className={`fs-pill-btn ${showPlanesList ? 'is-on' : ''}`}
                       onClick={() => setShowPlanesList(true)}
                       aria-label="View nearby planes"
                       title="View nearby planes"
@@ -852,11 +715,25 @@ export function App() {
                       <span>{filteredPlanes.length}</span>
                     </button>
 
+                    <button
+                      type="button"
+                      className="fs-pill-btn"
+                      onClick={fetchLiveFlights}
+                      disabled={loadingFlights}
+                      aria-label="Refresh live radar"
+                      title="Refresh live radar"
+                    >
+                      <RefreshCw size={18} className={loadingFlights ? 'spin' : ''} />
+                    </button>
+
                     <div className="map-menu-wrap" ref={menuRef}>
                       <button
                         type="button"
                         className={`fs-pill-btn ${showMapMenu ? 'is-on' : ''}`}
-                        onClick={() => setShowMapMenu((prev) => !prev)}
+                        onClick={() => {
+                          setShowFilterMenu(false);
+                          setShowMapMenu((prev) => !prev);
+                        }}
                         aria-expanded={showMapMenu}
                         aria-label="Menu"
                         title="Menu"
@@ -866,19 +743,21 @@ export function App() {
 
                       {showMapMenu && (
                         <div className="map-options-popover" role="menu">
-                          <button
-                            type="button"
-                            className="map-option-item"
-                            role="menuitem"
-                            onClick={() => {
-                              setShowMapMenu(false);
-                              setIsFullScreen(false);
-                              setTab('guide');
-                            }}
-                          >
-                            <BookOpen size={16} color="#0284C7" />
-                            <span>Plane Guide</span>
-                          </button>
+                          {isFullScreen && (
+                            <button
+                              type="button"
+                              className="map-option-item"
+                              role="menuitem"
+                              onClick={() => {
+                                setShowMapMenu(false);
+                                setIsFullScreen(false);
+                                setTab('guide');
+                              }}
+                            >
+                              <BookOpen size={16} color="#0284C7" />
+                              <span>Plane Guide</span>
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -903,20 +782,22 @@ export function App() {
                             <span>Use My Location (GPS)</span>
                           </button>
 
-                          <button
-                            type="button"
-                            className="map-option-item"
-                            role="menuitem"
-                            onClick={() => {
-                              setShowMapMenu(false);
-                              stopSpeaking();
-                              setSpeakingId(null);
-                              setShowVoiceModal(true);
-                            }}
-                          >
-                            <SlidersHorizontal size={16} color="#0284C7" />
-                            <span>Voice Settings</span>
-                          </button>
+                          {isFullScreen && (
+                            <button
+                              type="button"
+                              className="map-option-item"
+                              role="menuitem"
+                              onClick={() => {
+                                setShowMapMenu(false);
+                                stopSpeaking();
+                                setSpeakingId(null);
+                                setShowVoiceModal(true);
+                              }}
+                            >
+                              <SlidersHorizontal size={16} color="#0284C7" />
+                              <span>Voice Settings</span>
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -947,24 +828,11 @@ export function App() {
                             <Gauge size={16} color="#0284C7" />
                             <span>Show Speed &amp; Altitude</span>
                           </button>
-
-                          <button
-                            type="button"
-                            className="map-option-item"
-                            role="menuitem"
-                            onClick={() => {
-                              setShowMapMenu(false);
-                              fetchLiveFlights();
-                            }}
-                          >
-                            <RefreshCw size={16} color="#0284C7" />
-                            <span>Refresh Radar</span>
-                          </button>
                         </div>
                       )}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
               {selectedPlane && (
