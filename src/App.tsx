@@ -650,10 +650,6 @@ export function App() {
                         aria-label="Choose home city"
                         value={selectedLocationCode}
                         onChange={(e) => {
-                          if (e.target.value === '__SET_HOME__') {
-                            setShowHomeModal(true);
-                            return;
-                          }
                           if (e.target.value === 'HOME') {
                             handleJumpHome();
                             setSelectedPlaneId(null);
@@ -680,7 +676,6 @@ export function App() {
                         }}
                       >
                         {home.code === 'HOME' && <option value="HOME">🏠 {home.name}</option>}
-                        <option value="__SET_HOME__">🏠 Set Home Address...</option>
                         {LOCATION_PRESETS.map((loc) => (
                           <option key={loc.code} value={loc.code}>
                             {loc.name}
