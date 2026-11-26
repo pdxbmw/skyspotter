@@ -191,10 +191,13 @@ export function App() {
           setShowFilterMenu(false);
         }}
       >
+        <Check
+          size={16}
+          className={`option-check-left ${selectedCategories.length === 0 ? 'is-checked' : ''}`}
+        />
         <span>✨</span>
         <span>All Aircraft</span>
         <span className="filter-count-pill">{livePlanes.length}</span>
-        {selectedCategories.length === 0 && <Check size={16} className="option-check" />}
       </button>
       <div className="filter-popover-divider" />
       {(Object.keys(CATEGORY_STYLES) as PlaneCategory[]).map((cat) => {
@@ -209,10 +212,13 @@ export function App() {
             aria-checked={checked}
             onClick={() => toggleCategory(cat)}
           >
+            <Check
+              size={16}
+              className={`option-check-left ${checked ? 'is-checked' : ''}`}
+            />
             <span>{info.emoji}</span>
             <span>{info.label}</span>
             <span className="filter-count-pill">{categoryCounts[cat] ?? 0}</span>
-            {checked && <Check size={16} className="option-check" />}
           </button>
         );
       })}
@@ -665,9 +671,12 @@ export function App() {
                           setShowMapMenu(false);
                         }}
                       >
+                        <Check
+                          size={16}
+                          className={`option-check-left ${showRadarRings ? 'is-checked' : ''}`}
+                        />
                         <Radar size={16} color="#0284C7" />
                         <span>Show Radar Rings</span>
-                        {showRadarRings && <Check size={16} className="option-check" />}
                       </button>
 
                       <button
@@ -680,9 +689,12 @@ export function App() {
                           setShowMapMenu(false);
                         }}
                       >
+                        <Check
+                          size={16}
+                          className={`option-check-left ${showTelemetryLabels ? 'is-checked' : ''}`}
+                        />
                         <Gauge size={16} color="#0284C7" />
                         <span>Show Speed &amp; Altitude</span>
-                        {showTelemetryLabels && <Check size={16} className="option-check" />}
                       </button>
                     </div>
                   )}
@@ -916,9 +928,9 @@ export function App() {
                               setShowMapMenu(false);
                             }}
                           >
+                            <Check size={16} className={`option-check-left ${showRadarRings ? 'is-checked' : ''}`} />
                             <Radar size={16} color="#0284C7" />
                             <span>Show Radar Rings</span>
-                            {showRadarRings && <Check size={16} className="option-check" />}
                           </button>
 
                           <button
@@ -931,9 +943,9 @@ export function App() {
                               setShowMapMenu(false);
                             }}
                           >
+                            <Check size={16} className={`option-check-left ${showTelemetryLabels ? 'is-checked' : ''}`} />
                             <Gauge size={16} color="#0284C7" />
                             <span>Show Speed &amp; Altitude</span>
-                            {showTelemetryLabels && <Check size={16} className="option-check" />}
                           </button>
 
                           <button

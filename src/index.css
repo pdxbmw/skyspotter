@@ -1797,7 +1797,7 @@ select {
   top: calc(100% + 6px);
   right: 0;
   z-index: 1500;
-  min-width: 225px;
+  min-width: 260px;
   background: #ffffff;
   border: 2px solid var(--sky-200);
   border-radius: 16px;
@@ -1828,8 +1828,12 @@ select {
   background: var(--sky-50);
 }
 
-.option-check {
-  margin-left: auto;
+.option-check-left {
+  flex-shrink: 0;
+  color: #cbd5e1;
+}
+
+.option-check-left.is-checked {
   color: #059669;
 }
 
