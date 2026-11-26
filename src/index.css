@@ -611,13 +611,15 @@ select {
 }
 
 .vert-arrow {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1;
+  margin-left: 3px;
+  display: inline-block;
 }
 
 .vert-arrow.is-up {
-  color: #34d399;
+  color: #4ade80;
 }
 
 .vert-arrow.is-down {

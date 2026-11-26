@@ -220,7 +220,7 @@ export const SkyMap: React.FC<SkyMapProps> = ({
             ${svg}
           </div>
           <div class="map-plane-label">
-            <div class="map-plane-callsign">${vertArrow}${plane.callsign}</div>
+            <div class="map-plane-callsign">${plane.callsign}${vertArrow}</div>
             ${telemetryLine}
           </div>
         </div>

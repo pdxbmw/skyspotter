@@ -102,7 +102,7 @@ export function App() {
   const [jumpHomeSeq, setJumpHomeSeq] = useState(0);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [showRadarRings, setShowRadarRings] = useState(true);
-  const [showTelemetryLabels, setShowTelemetryLabels] = useState(false);
+  const [showTelemetryLabels, setShowTelemetryLabels] = useState(true);
   const [showMapMenu, setShowMapMenu] = useState(false);
   const [showPlanesList, setShowPlanesList] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
