@@ -14,6 +14,7 @@ import { PlaneDetailCard } from './components/PlaneDetailCard';
 import { PlaneGuide } from './components/PlaneGuide';
 import { SkyMap, ViewportBounds } from './components/SkyMap';
 import { VoiceSettingsModal } from './components/VoiceSettingsModal';
+import { HomeAddressModal } from './components/HomeAddressModal';
 import {
   CATEGORY_STYLES,
   LOCATION_PRESETS,
@@ -102,6 +103,7 @@ export function App() {
   const [speechNotice, setSpeechNotice] = useState<string | null>(null);
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(() => loadVoiceSettings());
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showHomeModal, setShowHomeModal] = useState(false);
   const [solvedQuizzes, setSolvedQuizzes] = useState<string[]>(initial.solvedQuizzes);
   const [isIdlePaused, setIsIdlePaused] = useState(false);
 
@@ -161,8 +163,8 @@ export function App() {
       const data = await res.json();
       const normalized = normalizeAdsbAircraft(
         Array.isArray(data.ac) ? data.ac : [],
-        scanViewport.lat,
-        scanViewport.lon
+        home.lat,
+        home.lon
       );
 
       if (data.source === 'opensky-world') {
@@ -187,7 +189,7 @@ export function App() {
     } finally {
       setLoadingFlights(false);
     }
-  }, [scanViewport]);
+  }, [scanViewport, home.lat, home.lon]);
 
   // Track user interaction so open-but-unattended browser tabs pause after 5 minutes
   useEffect(() => {
@@ -436,6 +438,10 @@ export function App() {
                     aria-label="Choose home city"
                     value={home.code}
                     onChange={(e) => {
+                      if (e.target.value === '__SET_HOME__') {
+                        setShowHomeModal(true);
+                        return;
+                      }
                       const preset = LOCATION_PRESETS.find((l) => l.code === e.target.value);
                       if (preset) {
                         setHome(preset);
@@ -450,7 +456,8 @@ export function App() {
                       }
                     }}
                   >
-                    {home.code === 'HOME' && <option value="HOME">My GPS Location</option>}
+                    {home.code === 'HOME' && <option value="HOME">🏠 {home.name}</option>}
+                    <option value="__SET_HOME__">🏠 Set Home Address...</option>
                     {LOCATION_PRESETS.map((loc) => (
                       <option key={loc.code} value={loc.code}>
                         {loc.name}
@@ -504,10 +511,23 @@ export function App() {
                         type="button"
                         className="map-option-item"
                         role="menuitem"
+                        onClick={() => {
+                          setShowMapMenu(false);
+                          setShowHomeModal(true);
+                        }}
+                      >
+                        <Home size={16} color="#0284C7" />
+                        <span>Set Home Address</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="map-option-item"
+                        role="menuitem"
                         onClick={handleUseMyLocation}
                       >
                         <Compass size={16} color="#0284C7" />
-                        <span>Use My Location (Near Me)</span>
+                        <span>Use My Location (GPS)</span>
                       </button>
 
                       <button
@@ -650,6 +670,26 @@ export function App() {
           settings={voiceSettings}
           onChange={handleVoiceSettingsChange}
           onClose={() => setShowVoiceModal(false)}
+        />
+      )}
+
+      {showHomeModal && (
+        <HomeAddressModal
+          currentHome={home}
+          apiBase={API_BASE}
+          onSelectHome={(nextHome) => {
+            setHome(nextHome);
+            setScanViewport({
+              lat: nextHome.lat,
+              lon: nextHome.lon,
+              zoom: 11,
+              radiusNm: 40,
+              bounds: null,
+            });
+            setSelectedPlaneId(null);
+          }}
+          onUseGps={handleUseMyLocation}
+          onClose={() => setShowHomeModal(false)}
         />
       )}
     </div>

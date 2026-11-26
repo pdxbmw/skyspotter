@@ -322,6 +322,34 @@ export async function handleAircraftApi(reqUrl, res) {
   sendJson(res, 200, payload);
 }
 
+export async function handleGeocodeApi(reqUrl, res) {
+  const query = (reqUrl.searchParams.get('q') ?? '').trim();
+  if (query.length < 2) {
+    sendJson(res, 400, { error: 'Enter at least 2 characters to search.' });
+    return;
+  }
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`;
+    const raw = await fetchJsonWithTimeout(url, 7000);
+    const results = Array.isArray(raw)
+      ? raw
+          .map((item) => ({
+            label: String(item.display_name ?? ''),
+            lat: Number.parseFloat(item.lat),
+            lon: Number.parseFloat(item.lon),
+          }))
+          .filter((r) => r.label && Number.isFinite(r.lat) && Number.isFinite(r.lon))
+      : [];
+    sendJson(res, 200, { results });
+  } catch (err) {
+    sendJson(res, 502, {
+      error: 'Address lookup failed right now.',
+      detail: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+}
+
 export async function routeApiRequest(req, res) {
   if (!req.url || !req.url.startsWith('/api/')) {
     return false;
@@ -341,6 +369,10 @@ export async function routeApiRequest(req, res) {
   }
   if (parsed.pathname === '/api/aircraft') {
     await handleAircraftApi(parsed, res);
+    return true;
+  }
+  if (parsed.pathname === '/api/geocode') {
+    await handleGeocodeApi(parsed, res);
     return true;
   }
 
