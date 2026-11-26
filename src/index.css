@@ -594,7 +594,8 @@ select {
 
 .map-plane-label {
   margin-top: -4px;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.86);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
   color: #ffffff;
   font-size: 11px;
   font-weight: 800;
@@ -602,6 +603,29 @@ select {
   border-radius: 8px;
   white-space: nowrap;
   text-align: center;
+}
+
+.map-plane-label.is-climbing {
+  background: rgba(5, 150, 105, 0.92);
+  border-color: #6ee7b7;
+}
+
+.map-plane-label.is-descending {
+  background: rgba(194, 65, 12, 0.92);
+  border-color: #fdba74;
+}
+
+.map-plane-label.is-climbing .map-plane-telemetry {
+  color: #d1fae5;
+}
+
+.map-plane-label.is-descending .map-plane-telemetry {
+  color: #ffedd5;
+}
+
+.map-plane-label.is-climbing .vert-arrow.is-up,
+.map-plane-label.is-descending .vert-arrow.is-down {
+  color: #ffffff;
 }
 
 .map-plane-callsign {

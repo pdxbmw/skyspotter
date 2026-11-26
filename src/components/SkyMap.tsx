@@ -214,12 +214,19 @@ export const SkyMap: React.FC<SkyMapProps> = ({
           ? `<div class="map-plane-telemetry">${[altText, spdText].filter(Boolean).join(' • ')}</div>`
           : '';
 
+      const vertClass =
+        !plane.onGround && plane.verticalRateFpm > 350
+          ? 'is-climbing'
+          : !plane.onGround && plane.verticalRateFpm < -350
+            ? 'is-descending'
+            : '';
+
       const iconHtml = `
         <div class="map-plane-marker ${isSelected ? 'is-selected' : ''} ${isClosest ? 'is-closest' : ''} ${plane.onGround ? 'is-ground' : ''}">
           <div class="map-plane-rotator" style="transform: rotate(${plane.trackDeg}deg);">
             ${svg}
           </div>
-          <div class="map-plane-label">
+          <div class="map-plane-label ${vertClass}">
             <div class="map-plane-callsign">${plane.callsign}${vertArrow}</div>
             ${telemetryLine}
           </div>
