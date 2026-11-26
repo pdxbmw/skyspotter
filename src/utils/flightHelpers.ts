@@ -218,6 +218,71 @@ export function getVerticalStatus(plane: AircraftTelemetry): {
   return { label: 'Cruising Smoothly', arrow: '➡️', color: '#0284C7' };
 }
 
+function bearingDeg(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+  const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1));
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+export function isRoutePlausible(
+  plane: AircraftTelemetry,
+  details?: AircraftDetailsResponse | null
+): boolean {
+  const origin = details?.flightroute?.origin;
+  const dest = details?.flightroute?.destination;
+  if (!origin || !dest) return false;
+  if (
+    typeof origin.latitude !== 'number' ||
+    typeof origin.longitude !== 'number' ||
+    typeof dest.latitude !== 'number' ||
+    typeof dest.longitude !== 'number'
+  ) {
+    return true;
+  }
+
+  const distFromOrigin = haversineMiles(plane.lat, plane.lon, origin.latitude, origin.longitude);
+  const distToDest = haversineMiles(plane.lat, plane.lon, dest.latitude, dest.longitude);
+  const routeLen = haversineMiles(origin.latitude, origin.longitude, dest.latitude, dest.longitude);
+
+  // If landing or on the ground, it should be near the destination airport
+  if (
+    (plane.onGround || (plane.altitudeFt !== null && plane.altitudeFt < 12000 && plane.verticalRateFpm < -250)) &&
+    distToDest > 75
+  ) {
+    return false;
+  }
+
+  // If taking off low, it should be near the origin airport
+  if (
+    plane.altitudeFt !== null &&
+    plane.altitudeFt < 12000 &&
+    plane.verticalRateFpm > 250 &&
+    distFromOrigin > 75
+  ) {
+    return false;
+  }
+
+  // Plane should lie reasonably along the origin -> destination corridor
+  if (distFromOrigin + distToDest > routeLen * 1.35 + 120) {
+    return false;
+  }
+
+  // Plane heading should generally point toward destination when airborne far away
+  if (!plane.onGround && distToDest > 25) {
+    const toDest = bearingDeg(plane.lat, plane.lon, dest.latitude, dest.longitude);
+    const diff = Math.abs(((plane.trackDeg - toDest + 540) % 360) - 180);
+    if (diff > 105) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function buildPlaneStory(
   plane: AircraftTelemetry,
   details?: AircraftDetailsResponse | null
@@ -228,10 +293,9 @@ export function buildPlaneStory(
       : plane.friendlyModel;
 
   const airline = details?.flightroute?.airline?.name || plane.airlineName;
-  const originCity =
-    details?.flightroute?.origin?.municipality || plane.demoOrigin?.city;
-  const destCity =
-    details?.flightroute?.destination?.municipality || plane.demoDestination?.city;
+  const validRoute = isRoutePlausible(plane, details);
+  const originCity = validRoute ? details?.flightroute?.origin?.municipality : undefined;
+  const destCity = validRoute ? details?.flightroute?.destination?.municipality : undefined;
 
   const intro = `Look up to the ${plane.bearingCardinal}, about ${plane.distanceMiles} miles away! That is flight ${plane.callsign}, a ${modelName} flying for ${airline}.`;
 

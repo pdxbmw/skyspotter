@@ -48,6 +48,8 @@ export interface AirportInfo {
   name?: string;
   municipality?: string;
   country_name?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface FlightRouteInfo {

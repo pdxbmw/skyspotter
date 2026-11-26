@@ -7,6 +7,7 @@ import {
   getAltitudeComparison,
   getSpeedComparison,
   getVerticalStatus,
+  isRoutePlausible,
 } from '../utils/flightHelpers';
 import { PlaneIllustration } from './PlaneArt';
 
@@ -33,10 +34,11 @@ export const PlaneDetailCard: React.FC<PlaneDetailCardProps> = ({
   const vertical = getVerticalStatus(plane);
   const story = buildPlaneStory(plane, details);
 
-  const originCode = details?.flightroute?.origin?.iata_code || plane.demoOrigin?.code;
-  const originCity = details?.flightroute?.origin?.municipality || plane.demoOrigin?.city;
-  const destCode = details?.flightroute?.destination?.iata_code || plane.demoDestination?.code;
-  const destCity = details?.flightroute?.destination?.municipality || plane.demoDestination?.city;
+  const validRoute = isRoutePlausible(plane, details);
+  const originCode = validRoute ? details?.flightroute?.origin?.iata_code : undefined;
+  const originCity = validRoute ? details?.flightroute?.origin?.municipality : undefined;
+  const destCode = validRoute ? details?.flightroute?.destination?.iata_code : undefined;
+  const destCity = validRoute ? details?.flightroute?.destination?.municipality : undefined;
 
   const modelTitle =
     details?.aircraft?.manufacturer && details?.aircraft?.type
