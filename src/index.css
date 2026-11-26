@@ -1995,8 +1995,9 @@ select {
 }
 
 .map-fullscreen-btn {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(6px);
@@ -2015,6 +2016,7 @@ select {
 
 /* Custom +/- zoom controls matching .map-fullscreen-btn */
 .map-zoom-controls {
+  width: 42px;
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.94);
@@ -2026,8 +2028,9 @@ select {
 }
 
 .map-zoom-btn {
-  width: 38px;
+  width: 100%;
   height: 38px;
+  padding: 0;
   border: none;
   border-bottom: 1px solid var(--sky-100);
   background: transparent;
