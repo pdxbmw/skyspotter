@@ -718,7 +718,7 @@ export function App() {
                         aria-label={`Back to ${home.name}`}
                         title={`Back to ${home.name}`}
                       >
-                        <Home size={15} />
+                        <Home size={18} />
                       </button>
                     )}
 
@@ -729,7 +729,7 @@ export function App() {
                       aria-label="View nearby planes"
                       title="View nearby planes"
                     >
-                      <Plane size={15} />
+                      <Plane size={18} />
                       <span>{livePlanes.length}</span>
                     </button>
 
@@ -742,7 +742,7 @@ export function App() {
                         aria-label="Menu"
                         title="Menu"
                       >
-                        <Menu size={16} />
+                        <Menu size={18} />
                       </button>
 
                       {showMapMenu && (
