@@ -89,6 +89,7 @@ export function App() {
 
   const [tab, setTab] = useState<ActiveTab>('map');
   const [home, setHome] = useState<HomeLocation>(initial.home);
+  const [selectedLocationCode, setSelectedLocationCode] = useState<string>(initial.home.code);
   const [scanViewport, setScanViewport] = useState<{
     lat: number;
     lon: number;
@@ -443,6 +444,7 @@ export function App() {
           lon: Number(pos.coords.longitude.toFixed(4)),
         };
         setHome(nextHome);
+        setSelectedLocationCode(nextHome.code);
         setScanViewport({
           lat: nextHome.lat,
           lon: nextHome.lon,
@@ -460,6 +462,7 @@ export function App() {
   };
 
   const handleJumpHome = () => {
+    setSelectedLocationCode(home.code);
     setScanViewport({ lat: home.lat, lon: home.lon, zoom: 10, radiusNm: 50, bounds: null });
     setJumpHomeSeq((prev) => prev + 1);
   };
@@ -644,15 +647,26 @@ export function App() {
                     <MapPin size={16} color="#0284C7" />
                     <select
                       aria-label="Choose home city"
-                      value={home.code}
+                      value={selectedLocationCode}
                       onChange={(e) => {
                         if (e.target.value === '__SET_HOME__') {
                           setShowHomeModal(true);
                           return;
                         }
+                        if (e.target.value === 'HOME') {
+                          handleJumpHome();
+                          setSelectedPlaneId(null);
+                          return;
+                        }
                         const preset = LOCATION_PRESETS.find((l) => l.code === e.target.value);
                         if (preset) {
-                          setHome(preset);
+                          setSelectedLocationCode(preset.code);
+                          setFocusTarget({
+                            lat: preset.lat,
+                            lon: preset.lon,
+                            zoom: 10,
+                            seq: Date.now(),
+                          });
                           setScanViewport({
                             lat: preset.lat,
                             lon: preset.lon,
@@ -947,6 +961,7 @@ export function App() {
           apiBase={API_BASE}
           onSelectHome={(nextHome) => {
             setHome(nextHome);
+            setSelectedLocationCode(nextHome.code);
             setScanViewport({
               lat: nextHome.lat,
               lon: nextHome.lon,
