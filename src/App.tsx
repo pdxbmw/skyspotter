@@ -17,6 +17,7 @@ import {
   Plus,
   Minus,
   Gauge,
+  Filter,
 } from 'lucide-react';
 import { PlaneDetailCard } from './components/PlaneDetailCard';
 import { PlaneGuide } from './components/PlaneGuide';
@@ -32,6 +33,7 @@ import {
   AircraftTelemetry,
   EncyclopediaEntry,
   HomeLocation,
+  PlaneCategory,
 } from './types/aviation';
 import {
   haversineMiles,
@@ -104,6 +106,8 @@ export function App() {
   const [showRadarRings, setShowRadarRings] = useState(true);
   const [showTelemetryLabels, setShowTelemetryLabels] = useState(true);
   const [showMapMenu, setShowMapMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<PlaneCategory[]>([]);
   const [showPlanesList, setShowPlanesList] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showStatusDetail, setShowStatusDetail] = useState(false);
@@ -131,23 +135,89 @@ export function App() {
   const viewportDebounceRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const filterRef = useRef<HTMLDivElement | null>(null);
 
   const handleVoiceSettingsChange = (next: VoiceSettings) => {
     setVoiceSettings(next);
     saveVoiceSettings(next);
   };
 
-  // Close map options popover on outside click
+  // Close popovers on outside click
   useEffect(() => {
-    if (!showMapMenu) return;
+    if (!showMapMenu && !showFilterMenu) return;
     const handleOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (showMapMenu && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowMapMenu(false);
+      }
+      if (showFilterMenu && filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setShowFilterMenu(false);
       }
     };
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, [showMapMenu]);
+  }, [showMapMenu, showFilterMenu]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Partial<Record<PlaneCategory, number>> = {};
+    for (const p of livePlanes) {
+      counts[p.category] = (counts[p.category] ?? 0) + 1;
+    }
+    return counts;
+  }, [livePlanes]);
+
+  const filteredPlanes = useMemo(
+    () =>
+      selectedCategories.length === 0
+        ? livePlanes
+        : livePlanes.filter((p) => selectedCategories.includes(p.category)),
+    [livePlanes, selectedCategories]
+  );
+
+  const toggleCategory = (cat: PlaneCategory) => {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const renderFilterPopover = () => (
+    <div className="map-options-popover" role="menu" aria-label="Filter by aircraft type">
+      <button
+        type="button"
+        className="map-option-item"
+        role="menuitemcheckbox"
+        aria-checked={selectedCategories.length === 0}
+        onClick={() => {
+          setSelectedCategories([]);
+          setShowFilterMenu(false);
+        }}
+      >
+        <span>✨</span>
+        <span>All Aircraft</span>
+        <span className="filter-count-pill">{livePlanes.length}</span>
+        {selectedCategories.length === 0 && <Check size={16} className="option-check" />}
+      </button>
+      <div className="filter-popover-divider" />
+      {(Object.keys(CATEGORY_STYLES) as PlaneCategory[]).map((cat) => {
+        const info = CATEGORY_STYLES[cat];
+        const checked = selectedCategories.includes(cat);
+        return (
+          <button
+            key={cat}
+            type="button"
+            className="map-option-item"
+            role="menuitemcheckbox"
+            aria-checked={checked}
+            onClick={() => toggleCategory(cat)}
+          >
+            <span>{info.emoji}</span>
+            <span>{info.label}</span>
+            <span className="filter-count-pill">{categoryCounts[cat] ?? 0}</span>
+            {checked && <Check size={16} className="option-check" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   // Persist home location & quiz stars
   useEffect(() => {
@@ -506,6 +576,26 @@ export function App() {
               </div>
 
               <div className="controls-right">
+                <div className="map-menu-wrap" ref={isFullScreen ? undefined : filterRef}>
+                  <button
+                    type="button"
+                    className={`btn-pill-toggle ${selectedCategories.length > 0 || showFilterMenu ? 'is-on' : ''}`}
+                    onClick={() => {
+                      setShowMapMenu(false);
+                      setShowFilterMenu((prev) => !prev);
+                    }}
+                    aria-expanded={showFilterMenu}
+                    aria-label="Filter by aircraft type"
+                    title="Filter by aircraft type"
+                  >
+                    <Filter size={15} />
+                    <span className="hide-mobile">
+                      {selectedCategories.length > 0 ? `Filter (${selectedCategories.length})` : 'Filter'}
+                    </span>
+                  </button>
+                  {showFilterMenu && !isFullScreen && renderFilterPopover()}
+                </div>
+
                 <button
                   type="button"
                   className={`btn-pill-toggle ${showPlanesList ? 'is-on' : ''}`}
@@ -513,7 +603,7 @@ export function App() {
                   title="View nearby planes list"
                 >
                   <Plane size={15} />
-                  <span>{livePlanes.length}</span>
+                  <span>{filteredPlanes.length}</span>
                 </button>
 
                 <button
@@ -622,7 +712,7 @@ export function App() {
               <div className="map-container-wrap">
                 <SkyMap
                   home={home}
-                  planes={livePlanes}
+                  planes={filteredPlanes}
                   selectedPlaneId={selectedPlaneId}
                   showRadarRings={showRadarRings}
                   showTelemetryLabels={showTelemetryLabels}
@@ -722,6 +812,23 @@ export function App() {
                       </button>
                     )}
 
+                    <div className="map-menu-wrap" ref={isFullScreen ? filterRef : undefined}>
+                      <button
+                        type="button"
+                        className={`fs-pill-btn ${selectedCategories.length > 0 || showFilterMenu ? 'is-on' : ''}`}
+                        onClick={() => {
+                          setShowMapMenu(false);
+                          setShowFilterMenu((prev) => !prev);
+                        }}
+                        aria-expanded={showFilterMenu}
+                        aria-label="Filter by aircraft type"
+                        title="Filter by aircraft type"
+                      >
+                        <Filter size={18} />
+                      </button>
+                      {showFilterMenu && isFullScreen && renderFilterPopover()}
+                    </div>
+
                     <button
                       type="button"
                       className="fs-pill-btn"
@@ -730,7 +837,7 @@ export function App() {
                       title="View nearby planes"
                     >
                       <Plane size={18} />
-                      <span>{livePlanes.length}</span>
+                      <span>{filteredPlanes.length}</span>
                     </button>
 
                     <div className="map-menu-wrap" ref={menuRef}>
@@ -892,7 +999,7 @@ export function App() {
           <div className="voice-modal-card nearby-modal-card">
             <div className="voice-modal-header">
               <div>
-                <h2 id="nearby-modal-title">✈️ Planes in the Sky ({livePlanes.length})</h2>
+                <h2 id="nearby-modal-title">✈️ Planes in the Sky ({filteredPlanes.length})</h2>
                 <p>Sorted closest to {home.name}. Tap one to zoom &amp; learn more.</p>
               </div>
               <button
@@ -905,15 +1012,17 @@ export function App() {
               </button>
             </div>
 
-            {livePlanes.length === 0 ? (
+            {filteredPlanes.length === 0 ? (
               <div className="nearby-empty">
                 {loadingFlights
                   ? 'Scanning the sky for airplanes...'
-                  : 'No planes found nearby right now. Try zooming out!'}
+                  : selectedCategories.length > 0
+                    ? 'No aircraft match your current filter.'
+                    : 'No planes found nearby right now. Try zooming out!'}
               </div>
             ) : (
               <div className="nearby-vertical-list">
-                {livePlanes.slice(0, 30).map((plane) => {
+                {filteredPlanes.slice(0, 30).map((plane) => {
                   const cat = CATEGORY_STYLES[plane.category];
                   const active = plane.id === selectedPlaneId;
                   return (

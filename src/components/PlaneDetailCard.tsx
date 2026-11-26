@@ -92,19 +92,24 @@ export const PlaneDetailCard: React.FC<PlaneDetailCardProps> = ({
         {loadingDetails ? (
           <span className="route-loading">Checking flight path in the sky...</span>
         ) : originCity && destCity ? (
-          <div className="route-cities">
-            <div className="route-stop">
-              <span className="route-code">{originCode || 'FROM'}</span>
-              <span className="route-city">{originCity}</span>
+          <>
+            <div className="route-cities">
+              <div className="route-stop">
+                <span className="route-code">{originCode || 'FROM'}</span>
+                <span className="route-city">{originCity}</span>
+              </div>
+              <div className="route-arrow" aria-hidden="true">
+                ✈️ ➔
+              </div>
+              <div className="route-stop">
+                <span className="route-code">{destCode || 'TO'}</span>
+                <span className="route-city">{destCity}</span>
+              </div>
             </div>
-            <div className="route-arrow" aria-hidden="true">
-              ✈️ ➔
-            </div>
-            <div className="route-stop">
-              <span className="route-code">{destCode || 'TO'}</span>
-              <span className="route-city">{destCity}</span>
-            </div>
-          </div>
+            {details?.flightroute && (
+              <div className="route-note">Typical route for flight {plane.callsign}</div>
+            )}
+          </>
         ) : (
           <div className="route-local">
             <Compass size={18} />

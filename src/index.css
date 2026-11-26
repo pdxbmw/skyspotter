@@ -1833,6 +1833,30 @@ select {
   color: #059669;
 }
 
+.filter-count-pill {
+  margin-left: auto;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--slate-500);
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.filter-popover-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 2px 6px;
+}
+
+.route-note {
+  margin-top: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--slate-500);
+  text-align: center;
+}
+
 .current-home-pill {
   display: flex;
   align-items: center;
